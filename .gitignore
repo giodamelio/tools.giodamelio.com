@@ -11,3 +11,6 @@ devenv.local.yaml
 
 # Nix
 /result
+
+# Wrangler
+/.wrangler
