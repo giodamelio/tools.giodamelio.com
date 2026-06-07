@@ -20,6 +20,11 @@
 
   languages.javascript.enable = true;
 
+  # Local dev server with live reload (auto-refreshes the browser on change).
+  # Start with `devenv up`; serves ./src on http://localhost:8788.
+  # https://devenv.sh/processes/
+  processes.dev.exec = "wrangler pages dev src --live-reload --port 8788";
+
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
     echo hello from $GREET
