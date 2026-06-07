@@ -38,6 +38,37 @@ main {
   margin: 0 auto;
 }
 
+/* Cheat-sheet layout: each section is a flex child holding one table, so
+   sections reflow into as many columns as fit — 1 on mobile, more as the
+   screen grows. Flex items are atomic, so a section never splits internally. */
+.sheet {
+  max-width: 1500px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.sheet > header {
+  flex: 1 1 100%;
+}
+
+.sheet > section {
+  flex: 1 1 21rem;
+  padding: 0.9rem 1.1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.sheet > section h2 {
+  margin-top: 0;
+}
+
+.sheet h1 {
+  font-size: clamp(1.6rem, 1.2rem + 2vw, 2.25rem);
+}
+
 header {
   margin-bottom: 2rem;
 }
@@ -88,6 +119,63 @@ ul.tools .desc {
   display: block;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+section {
+  margin: 2.5rem 0;
+}
+
+section h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+
+th:last-child,
+td:last-child {
+  padding-right: 0;
+}
+
+thead th {
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--accent);
+  white-space: nowrap;
+}
+
+tbody tr:hover {
+  background: var(--card);
+}
+
+td .sym,
+th .sym {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 footer {

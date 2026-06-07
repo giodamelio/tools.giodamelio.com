@@ -13,14 +13,421 @@
     </style>
   </head>
   <body>
-    <main>
+    <main class="sheet">
       <header>
         <a class="back" href="/">&larr; all tools</a>
         <h1>Units</h1>
-        <p>A quick reference for common unit conversions</p>
+        <p>A quick reference for physics units of measure</p>
       </header>
 
-      <!-- TODO: build out the unit cheatsheet -->
+      <section>
+        <h2>The 7 Base Units</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quantity</th>
+                <th>Symbol</th>
+                <th>SI</th>
+                <th>Imperial</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Length / Distance</td>
+                <td class="sym">w, x, y, z</td>
+                <td>meter (m)</td>
+                <td>foot (ft)</td>
+              </tr>
+              <tr>
+                <td>Mass</td>
+                <td class="sym">m</td>
+                <td>kilogram (kg)</td>
+                <td>slug</td>
+              </tr>
+              <tr>
+                <td>Time</td>
+                <td class="sym">t</td>
+                <td>second (s)</td>
+                <td>second (s)</td>
+              </tr>
+              <tr>
+                <td>Temperature</td>
+                <td class="sym">T</td>
+                <td>kelvin (K), &deg;C</td>
+                <td>&deg;F, &deg;R</td>
+              </tr>
+              <tr>
+                <td>Electric Current</td>
+                <td class="sym">i</td>
+                <td>ampere (A)</td>
+                <td>&mdash;</td>
+              </tr>
+              <tr>
+                <td>Amount of Substance</td>
+                <td class="sym">M, &chi;</td>
+                <td>mole (mol)</td>
+                <td>&mdash;</td>
+              </tr>
+              <tr>
+                <td>Luminous Intensity</td>
+                <td class="sym">I<sub>v</sub></td>
+                <td>candela (cd)</td>
+                <td>&mdash;</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Mechanics &mdash; Linear</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quantity</th>
+                <th>Symbol</th>
+                <th>SI Unit</th>
+                <th>SI Base Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Length / Displacement</td>
+                <td class="sym">d, l, h, r, s</td>
+                <td>meter (m)</td>
+                <td class="sym">m</td>
+              </tr>
+              <tr>
+                <td>Area</td>
+                <td class="sym">A, SA</td>
+                <td>&mdash;</td>
+                <td class="sym">m<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Volume</td>
+                <td class="sym">V</td>
+                <td>liter (L)</td>
+                <td class="sym">m<sup>3</sup></td>
+              </tr>
+              <tr>
+                <td>Velocity / Speed</td>
+                <td class="sym">v, s</td>
+                <td>&mdash;</td>
+                <td class="sym">m/s</td>
+              </tr>
+              <tr>
+                <td>Acceleration</td>
+                <td class="sym">a, g</td>
+                <td>&mdash;</td>
+                <td class="sym">m/s<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Jerk / Jolt</td>
+                <td class="sym">J</td>
+                <td>&mdash;</td>
+                <td class="sym">m/s<sup>3</sup></td>
+              </tr>
+              <tr>
+                <td>Impulse</td>
+                <td class="sym">I</td>
+                <td>N&middot;s</td>
+                <td class="sym">kg&middot;m/s</td>
+              </tr>
+              <tr>
+                <td>Linear Momentum</td>
+                <td class="sym">p</td>
+                <td>&mdash;</td>
+                <td class="sym">kg&middot;m/s</td>
+              </tr>
+              <tr>
+                <td>Force</td>
+                <td class="sym">F</td>
+                <td>newton (N)</td>
+                <td class="sym">kg&middot;m/s<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Energy / Work / Heat</td>
+                <td class="sym">E, W, K, Q</td>
+                <td>joule (J)</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/s<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Power</td>
+                <td class="sym">P</td>
+                <td>watt (W)</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/s<sup>3</sup></td>
+              </tr>
+              <tr>
+                <td>Surface Tension</td>
+                <td class="sym">T</td>
+                <td>N/m</td>
+                <td class="sym">kg/s<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Pressure / Stress</td>
+                <td class="sym">P</td>
+                <td>pascal (Pa)</td>
+                <td class="sym">kg/(m&middot;s<sup>2</sup>)</td>
+              </tr>
+              <tr>
+                <td>Density</td>
+                <td class="sym">&rho;</td>
+                <td>&mdash;</td>
+                <td class="sym">kg/m<sup>3</sup></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Mechanics &mdash; Angular</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quantity</th>
+                <th>Symbol</th>
+                <th>SI Unit</th>
+                <th>SI Base Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Wavelength</td>
+                <td class="sym">&lambda;</td>
+                <td>meter (m)</td>
+                <td class="sym">m</td>
+              </tr>
+              <tr>
+                <td>Frequency</td>
+                <td class="sym">f, &nu;</td>
+                <td>hertz (Hz)</td>
+                <td class="sym">1/s</td>
+              </tr>
+              <tr>
+                <td>Period</td>
+                <td class="sym">T</td>
+                <td>second (s)</td>
+                <td class="sym">s</td>
+              </tr>
+              <tr>
+                <td>Angular Displacement</td>
+                <td class="sym">&theta;</td>
+                <td>radian (rad)</td>
+                <td class="sym">1</td>
+              </tr>
+              <tr>
+                <td>Solid Angle</td>
+                <td class="sym">&Omega;</td>
+                <td>steradian (sr)</td>
+                <td class="sym">1</td>
+              </tr>
+              <tr>
+                <td>Angular Velocity</td>
+                <td class="sym">&omega;</td>
+                <td>rad/s</td>
+                <td class="sym">1/s</td>
+              </tr>
+              <tr>
+                <td>Angular Acceleration</td>
+                <td class="sym">&alpha;</td>
+                <td>rad/s<sup>2</sup></td>
+                <td class="sym">1/s<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Moment of Inertia</td>
+                <td class="sym">I</td>
+                <td>kg&middot;m<sup>2</sup></td>
+                <td class="sym">kg&middot;m<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Angular Momentum</td>
+                <td class="sym">J, L</td>
+                <td>kg&middot;m<sup>2</sup>&middot;rad/s</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/s</td>
+              </tr>
+              <tr>
+                <td>Torque</td>
+                <td class="sym">&tau;</td>
+                <td>N&middot;m</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/s<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Angular Impulse</td>
+                <td class="sym">J</td>
+                <td>N&middot;m&middot;s</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/s</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Electromagnetics</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quantity</th>
+                <th>Symbol</th>
+                <th>SI Unit</th>
+                <th>SI Base Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Electric Charge</td>
+                <td class="sym">Q, q, e</td>
+                <td>coulomb (C)</td>
+                <td class="sym">s&middot;A</td>
+              </tr>
+              <tr>
+                <td>Current Density</td>
+                <td class="sym">J</td>
+                <td>A/m<sup>2</sup></td>
+                <td class="sym">A/m<sup>2</sup></td>
+              </tr>
+              <tr>
+                <td>Voltage / EMF</td>
+                <td class="sym">V, &Escr;</td>
+                <td>volt (V)</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/(s<sup>3</sup>&middot;A)</td>
+              </tr>
+              <tr>
+                <td>Electric Field</td>
+                <td class="sym">E</td>
+                <td>V/m</td>
+                <td class="sym">kg&middot;m/(s<sup>3</sup>&middot;A)</td>
+              </tr>
+              <tr>
+                <td>Electric Flux</td>
+                <td class="sym">&Phi;<sub>e</sub></td>
+                <td>V&middot;m</td>
+                <td class="sym">kg&middot;m<sup>3</sup>/(s<sup>3</sup>&middot;A)</td>
+              </tr>
+              <tr>
+                <td>Resistance</td>
+                <td class="sym">R</td>
+                <td>ohm (&Omega;)</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/(s<sup>3</sup>&middot;A<sup>2</sup>)</td>
+              </tr>
+              <tr>
+                <td>Capacitance</td>
+                <td class="sym">C</td>
+                <td>farad (F)</td>
+                <td class="sym">s<sup>4</sup>&middot;A<sup>2</sup>/(kg&middot;m<sup>2</sup>)</td>
+              </tr>
+              <tr>
+                <td>Conductance</td>
+                <td class="sym">G</td>
+                <td>siemens (S)</td>
+                <td class="sym">s<sup>3</sup>&middot;A<sup>2</sup>/(kg&middot;m<sup>2</sup>)</td>
+              </tr>
+              <tr>
+                <td>Magnetic Flux</td>
+                <td class="sym">&Phi;<sub>B</sub></td>
+                <td>weber (Wb)</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/(s<sup>2</sup>&middot;A)</td>
+              </tr>
+              <tr>
+                <td>Magnetic Flux Density</td>
+                <td class="sym">B</td>
+                <td>tesla (T)</td>
+                <td class="sym">kg/(s<sup>2</sup>&middot;A)</td>
+              </tr>
+              <tr>
+                <td>Inductance</td>
+                <td class="sym">L</td>
+                <td>henry (H)</td>
+                <td class="sym">kg&middot;m<sup>2</sup>/(s<sup>2</sup>&middot;A<sup>2</sup>)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Photometry</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quantity</th>
+                <th>Symbol</th>
+                <th>SI Unit</th>
+                <th>SI Base Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Luminous Intensity</td>
+                <td class="sym">I<sub>v</sub></td>
+                <td>candela (cd)</td>
+                <td class="sym">cd</td>
+              </tr>
+              <tr>
+                <td>Luminous Flux</td>
+                <td class="sym">&Phi;</td>
+                <td>lumen (lm)</td>
+                <td class="sym">cd&middot;sr</td>
+              </tr>
+              <tr>
+                <td>Illuminance</td>
+                <td class="sym">E<sub>v</sub></td>
+                <td>lux (lx)</td>
+                <td class="sym">cd/m<sup>2</sup></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>SI Prefixes</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Prefix</th>
+                <th>Symbol</th>
+                <th>Power</th>
+                <th>Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>quetta</td><td class="sym">Q</td><td class="sym">10<sup>30</sup></td><td>nonillion</td></tr>
+              <tr><td>ronna</td><td class="sym">R</td><td class="sym">10<sup>27</sup></td><td>octillion</td></tr>
+              <tr><td>yotta</td><td class="sym">Y</td><td class="sym">10<sup>24</sup></td><td>septillion</td></tr>
+              <tr><td>zetta</td><td class="sym">Z</td><td class="sym">10<sup>21</sup></td><td>sextillion</td></tr>
+              <tr><td>exa</td><td class="sym">E</td><td class="sym">10<sup>18</sup></td><td>quintillion</td></tr>
+              <tr><td>peta</td><td class="sym">P</td><td class="sym">10<sup>15</sup></td><td>quadrillion</td></tr>
+              <tr><td>tera</td><td class="sym">T</td><td class="sym">10<sup>12</sup></td><td>trillion</td></tr>
+              <tr><td>giga</td><td class="sym">G</td><td class="sym">10<sup>9</sup></td><td>billion</td></tr>
+              <tr><td>mega</td><td class="sym">M</td><td class="sym">10<sup>6</sup></td><td>million</td></tr>
+              <tr><td>kilo</td><td class="sym">k</td><td class="sym">10<sup>3</sup></td><td>thousand</td></tr>
+              <tr><td>hecto</td><td class="sym">h</td><td class="sym">10<sup>2</sup></td><td>hundred</td></tr>
+              <tr><td>deca</td><td class="sym">da</td><td class="sym">10<sup>1</sup></td><td>ten</td></tr>
+              <tr><td>&mdash;</td><td class="sym">&mdash;</td><td class="sym">10<sup>0</sup></td><td>one</td></tr>
+              <tr><td>deci</td><td class="sym">d</td><td class="sym">10<sup>&minus;1</sup></td><td>tenth</td></tr>
+              <tr><td>centi</td><td class="sym">c</td><td class="sym">10<sup>&minus;2</sup></td><td>hundredth</td></tr>
+              <tr><td>milli</td><td class="sym">m</td><td class="sym">10<sup>&minus;3</sup></td><td>thousandth</td></tr>
+              <tr><td>micro</td><td class="sym">&mu;</td><td class="sym">10<sup>&minus;6</sup></td><td>millionth</td></tr>
+              <tr><td>nano</td><td class="sym">n</td><td class="sym">10<sup>&minus;9</sup></td><td>billionth</td></tr>
+              <tr><td>pico</td><td class="sym">p</td><td class="sym">10<sup>&minus;12</sup></td><td>trillionth</td></tr>
+              <tr><td>femto</td><td class="sym">f</td><td class="sym">10<sup>&minus;15</sup></td><td>quadrillionth</td></tr>
+              <tr><td>atto</td><td class="sym">a</td><td class="sym">10<sup>&minus;18</sup></td><td>quintillionth</td></tr>
+              <tr><td>zepto</td><td class="sym">z</td><td class="sym">10<sup>&minus;21</sup></td><td>sextillionth</td></tr>
+              <tr><td>yocto</td><td class="sym">y</td><td class="sym">10<sup>&minus;24</sup></td><td>septillionth</td></tr>
+              <tr><td>ronto</td><td class="sym">r</td><td class="sym">10<sup>&minus;27</sup></td><td>octillionth</td></tr>
+              <tr><td>quecto</td><td class="sym">q</td><td class="sym">10<sup>&minus;30</sup></td><td>nonillionth</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   </body>
 </html>
