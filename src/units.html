@@ -7,10 +7,34 @@
     <link rel="stylesheet" href="/style.css" />
     <style>
       .navbar {
+        max-width: 1500px;
+        margin: 0 auto 1.5rem;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem 1rem;
+      }
+      /* Masonry layout via the grid-lanes polyfill (see script at end of body).
+         `display: grid-lanes` is dropped by today's browsers, so the flex rules
+         in style.css act as the pre-JS fallback; the polyfill keys off
+         --grid-lanes-polyfill and packs the section cards into balanced lanes. */
+      .sheet {
+        --grid-lanes-polyfill: 1;
+        display: grid-lanes;
+        grid-template-columns: repeat(auto-fill, minmax(23rem, 1fr));
+        gap: 1.25rem;
+        /* The polyfill sets minHeight to exactly fit the tallest lane; use
+           content-box so this bottom padding adds breathing room below the
+           cards instead of being clipped into that height. */
+        box-sizing: content-box;
+        padding-bottom: 1rem;
+      }
+      /* Only the monospace symbol/formula cells may break anywhere (so a long
+         base-unit formula like kg·m²/(s³·A²) wraps instead of forcing a
+         horizontal scroll). Quantity-name cells keep normal word wrapping so
+         names break at spaces, never mid-word. */
+      .sheet td.sym {
+        overflow-wrap: anywhere;
       }
       .navbar .back {
         flex: 0 0 auto;
@@ -68,36 +92,36 @@
     </style>
   </head>
   <body>
-    <main class="sheet">
-      <header class="navbar">
-        <a class="back" href="/" title="All tools" aria-label="All tools">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </svg>
-        </a>
-        <div class="title">
-          <h1>Units</h1>
-          <p>A quick reference for physics units of measure</p>
-        </div>
-        <input
-          class="search"
-          type="search"
-          id="search"
-          placeholder="Search units…"
-          autocomplete="off"
-          aria-label="Search units"
-        />
-      </header>
+    <header class="navbar">
+      <a class="back" href="/" title="All tools" aria-label="All tools">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+      </a>
+      <div class="title">
+        <h1>Units</h1>
+        <p>A quick reference for physics units of measure</p>
+      </div>
+      <input
+        class="search"
+        type="search"
+        id="search"
+        placeholder="Search units…"
+        autocomplete="off"
+        aria-label="Search units"
+      />
+    </header>
 
+    <main class="sheet">
       <section>
         <h2>The 7 Base Units</h2>
         <div class="table-wrap">
@@ -548,6 +572,32 @@
         }
         if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
       });
+    </script>
+
+    <script type="module">
+      // CSS masonry isn't supported yet, so polyfill `display: grid-lanes`.
+      // https://github.com/ninjamar/grid-lanes-polyfill
+      import GridLanesPolyfill from "/grid-lanes-polyfill.js";
+      let pf = null;
+      const applyMasonry = () => {
+        if (!GridLanesPolyfill.supportsGridLanes()) {
+          pf = GridLanesPolyfill.init({ force: true });
+        }
+      };
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", applyMasonry);
+      } else {
+        applyMasonry();
+      }
+      // Web fonts swap in after the first layout and make the cards taller, so
+      // the polyfill's measured container height (from the fallback font) ends
+      // up short and clips the tallest card. Recompute exactly when the fonts
+      // are ready — no timers or guesswork.
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          if (pf && pf.refresh) pf.refresh();
+        });
+      }
     </script>
   </body>
 </html>
