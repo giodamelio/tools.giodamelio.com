@@ -33,10 +33,23 @@
         line-height: 1.3;
         color: var(--muted);
       }
-      .navbar .nav-end {
+      .navbar .search {
         flex: 1 1 0;
-        display: flex;
-        justify-content: flex-end;
+        min-width: 9rem;
+        padding: 0.4rem 0.7rem;
+        font: inherit;
+        font-size: 0.9rem;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+      .navbar .search:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      tbody tr.match {
+        background: color-mix(in srgb, var(--accent) 20%, transparent);
       }
     </style>
   </head>
@@ -48,7 +61,14 @@
           <h1>Units</h1>
           <p>A quick reference for physics units of measure</p>
         </div>
-        <div class="nav-end"></div>
+        <input
+          class="search"
+          type="search"
+          id="search"
+          placeholder="Search units…"
+          autocomplete="off"
+          aria-label="Search units"
+        />
       </header>
 
       <section>
@@ -460,5 +480,47 @@
         </div>
       </section>
     </main>
+
+    <script>
+      // Quick-and-dirty search: highlight matching rows and scroll to the
+      // first one. The query matches as a substring of the row's visible text,
+      // and also matches the spelled-out name of a Greek symbol in the row, so
+      // e.g. typing "lambda" finds the row whose symbol is λ.
+      const greek = {
+        "α": "alpha", "β": "beta", "γ": "gamma", "δ": "delta", "ε": "epsilon",
+        "ζ": "zeta", "η": "eta", "θ": "theta", "ι": "iota", "κ": "kappa",
+        "λ": "lambda", "μ": "mu", "ν": "nu", "ξ": "xi", "ο": "omicron",
+        "π": "pi", "ρ": "rho", "σ": "sigma", "τ": "tau", "υ": "upsilon",
+        "φ": "phi", "χ": "chi", "ψ": "psi", "ω": "omega",
+        "Γ": "gamma", "Δ": "delta", "Θ": "theta", "Λ": "lambda", "Ξ": "xi",
+        "Π": "pi", "Σ": "sigma", "Φ": "phi", "Ψ": "psi", "Ω": "omega",
+      };
+
+      const rows = [...document.querySelectorAll(".sheet tbody tr")];
+      for (const row of rows) {
+        const raw = row.textContent;
+        row.dataset.text = raw.toLowerCase();
+        const names = [];
+        for (const [ch, name] of Object.entries(greek)) {
+          if (raw.includes(ch) && !names.includes(name)) names.push(name);
+        }
+        row.dataset.names = names.join(" ");
+      }
+
+      const input = document.getElementById("search");
+      input.addEventListener("input", () => {
+        const q = input.value.trim().toLowerCase();
+        let first = null;
+        for (const row of rows) {
+          const hit =
+            q !== "" &&
+            (row.dataset.text.includes(q) ||
+              row.dataset.names.split(" ").includes(q));
+          row.classList.toggle("match", hit);
+          if (hit && !first) first = row;
+        }
+        if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    </script>
   </body>
 </html>
