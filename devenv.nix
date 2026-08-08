@@ -40,6 +40,11 @@
       wrangler versions upload --preview-alias "''${PREVIEW_ALIAS:-preview}"
     '';
 
+    # Refreshes src/itinerary/zone-data.js from @vvo/tzdb, a published
+    # conversion of the IANA time zone database. Only needed when tzdb renames
+    # a zone, which is a few times a year at most.
+    "itinerary:zones".exec = "node $DEVENV_ROOT/scripts/build-zone-data.js";
+
     "keeper:migrate".exec = "wrangler d1 migrations apply keeper-of-state --local";
 
     "keeper:migrate:remote".exec = "wrangler d1 migrations apply keeper-of-state --remote";

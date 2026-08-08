@@ -5,7 +5,11 @@
 `src/` holds the static tools browsers download: HTML, CSS, and plain JS. `worker/` holds the backend
 Worker, one directory per API, alongside whatever that API serves — its `docs.md` and `openapi.yaml`
 live next to its code. `docs/` is internal: prose for whoever works on this repo, never shipped.
-Backend code never goes in `src/`.
+`scripts/` holds one-off generators run through devenv tasks; they never ship either. Backend code
+never goes in `src/`.
+
+A generated file in `src/` says so in its first line and names the task that rebuilds it. Edit the
+generator, not the output.
 
 ## Build and deploy with devenv
 
