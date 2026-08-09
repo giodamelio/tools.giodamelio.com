@@ -1,0 +1,888 @@
+openapi: 3.1.0
+
+info:
+  title: Keeper of State
+  version: 1.0.0
+  summary: A minimal shared JSON blob store for the small tools on tools.giodamelio.com.
+  description: |
+    A minimal shared JSON blob store for the small tools on tools.giodamelio.com.
+
+    Each blob is one JSON object, keyed by an app namespace plus an unguessable id.
+    Anyone with the id can read it; writing requires a key. The design goal is that an
+    external LLM agent can be handed a short-lived, self-revoking credential and be
+    trusted to edit exactly one blob for exactly as long as you want it to.
+
+    ## Keys
+
+    There are two kinds of key, both UUIDs, both sent as `Authorization: Bearer <key>`:
+
+    - The **owner key** (`edit_key`) is returned once when you create a blob and never
+      again. It can read, write, delete, and mint temporary keys. There is no way to
+      list or recover it, so store it before you close the tab.
+    - A **temporary key** is minted from the owner key with an expiry of at most 24
+      hours. It can read, write, and revoke itself. It cannot delete the blob or mint
+      further keys.
+
+    ## Limits and behaviour
+
+    - A blob must be a JSON **object**. Arrays and scalars are rejected with
+      `not_an_object`.
+    - A blob body may be at most 102400 bytes (100 KB) of UTF-8.
+    - Blob creation is rate limited to 20 requests per minute per IP.
+    - Writes are last-write-wins. There is deliberately no conflict detection, no
+      `If-Match`, and no version history.
+    - Deletion is a soft delete, but it is permanent as far as the API is concerned:
+      every subsequent read and write on that id answers 404. There is no undelete.
+    - No CORS headers are sent. Callers must be same-origin browser code or a
+      server-side client.
+
+    ## Errors
+
+    Every error response has the same shape, a machine-readable `error` code plus a
+    human `message`:
+
+    ```json
+    { "error": "not_found", "message": "No blob with that id." }
+    ```
+
+    ## Unsupported methods
+
+    Every path answers `405` with `{ "error": "method_not_allowed", ... }` and an
+    `Allow` header for any method it does not implement. This is documented here rather
+    than on each operation, because a 405 is never a response to one of the operations
+    below; it is what you get when your request matches no operation at all.
+
+    | Path | Methods |
+    | --- | --- |
+    | `/api/keeper-of-state/` | `GET` |
+    | `/api/keeper-of-state/openapi.yaml` | `GET` |
+    | `/api/keeper-of-state/docs.md` | `GET` |
+    | `/api/keeper-of-state/{app}` | `POST` |
+    | `/api/keeper-of-state/{app}/{id}` | `GET, PUT, PATCH, DELETE` |
+    | `/api/keeper-of-state/{app}/{id}/keys` | `POST` |
+    | `/api/keeper-of-state/{app}/{id}/keys/self` | `DELETE` |
+
+    There is no `OPTIONS` handling and no preflight support, since the API sends no CORS
+    headers in the first place.
+
+servers:
+  - url: https://tools.giodamelio.com
+    description: Production
+
+tags:
+  - name: discovery
+    description: Unauthenticated endpoints describing the API itself.
+  - name: blobs
+    description: Creating, reading, replacing, patching, and deleting stored JSON objects.
+  - name: keys
+    description: Minting and revoking the short-lived keys handed to agents.
+
+security: []
+
+paths:
+  /api/keeper-of-state/:
+    get:
+      tags: [discovery]
+      operationId: getDiscovery
+      summary: Get links to the docs and the machine-readable spec
+      description: |
+        The entry point an agent can be pointed at when all it has been given is the
+        base URL. It returns absolute links to the prose guide and to this OpenAPI
+        document, so a caller never has to guess either path.
+      security: []
+      responses:
+        "200":
+          description: Discovery links.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discovery"
+              example:
+                docs: https://tools.giodamelio.com/api/keeper-of-state/docs.md
+                openapi: https://tools.giodamelio.com/api/keeper-of-state/openapi.yaml
+
+  /api/keeper-of-state/openapi.yaml:
+    get:
+      tags: [discovery]
+      operationId: getOpenapiDocument
+      summary: Get this OpenAPI 3.1 document
+      description: |
+        Serves this document as `application/yaml`. It is fully self-contained with no
+        external `$ref`s, so a client can fetch it once and resolve everything locally.
+      security: []
+      responses:
+        "200":
+          description: The OpenAPI document.
+          content:
+            application/yaml:
+              schema:
+                type: string
+              example: |
+                openapi: 3.1.0
+                info:
+                  title: Keeper of State
+                  version: 1.0.0
+
+  /api/keeper-of-state/docs.md:
+    get:
+      tags: [discovery]
+      operationId: getDocsMarkdown
+      summary: Get the prose usage guide
+      description: |
+        The human-and-agent-readable guide as Markdown. It covers the same surface as
+        this spec but with worked end-to-end flows, which is usually the cheaper thing
+        to paste into an agent's context.
+      security: []
+      responses:
+        "200":
+          description: The usage guide.
+          content:
+            text/markdown:
+              schema:
+                type: string
+              example: |
+                # Keeper of State
+
+                A tiny JSON blob store. Create a blob, keep the edit key, share the id.
+
+  /api/keeper-of-state/{app}:
+    parameters:
+      - $ref: "#/components/parameters/App"
+    post:
+      tags: [blobs]
+      operationId: createBlob
+      summary: Create a blob and get its owner key
+      description: |
+        Creates a new blob inside the `app` namespace and returns the only copy of its
+        owner key you will ever see. Store `edit_key` before doing anything else; it is
+        not recoverable, and without it the blob can be read by anyone holding the id
+        but written by nobody.
+
+        The id is generated server-side from a 27-character alphabet that omits vowels
+        and lookalike glyphs, so it is unguessable and reasonably safe to read aloud.
+        The app namespace is created implicitly on first use; there is no registration
+        step.
+
+        This is the only rate limited endpoint: 20 creations per minute per IP.
+      security: []
+      requestBody:
+        required: true
+        description: The initial blob. Must be a JSON object.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Blob"
+            example:
+              title: Lisbon, October
+              traveler: gio
+              notes: book the Sintra train the night before
+              days:
+                - date: "2026-10-03"
+                  city: Lisbon
+                  stops: [Time Out Market, Miradouro de Santa Catarina]
+                - date: "2026-10-04"
+                  city: Sintra
+                  stops: [Quinta da Regaleira]
+      responses:
+        "201":
+          description: Blob created. The `edit_key` in this body is never shown again.
+          headers:
+            Location:
+              description: Absolute path of the new blob.
+              schema:
+                type: string
+              example: /api/keeper-of-state/itinerary/q7fn2mkxbtr93d
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedBlob"
+              example:
+                id: q7fn2mkxbtr93d
+                edit_key: b3d6e2f1-8a4c-4d19-9f2e-71c05ab8e3d4
+                url: https://tools.giodamelio.com/api/keeper-of-state/itinerary/q7fn2mkxbtr93d
+                created_at: "2026-08-08T17:42:11Z"
+        "400":
+          description: |
+            The app namespace is malformed (`invalid_app`), the body is not parseable
+            JSON (`invalid_json`), or the body parsed but is an array, a scalar, or
+            null rather than an object (`not_an_object`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid_app:
+                  summary: App namespace fails the naming rule
+                  value:
+                    error: invalid_app
+                    message: App must match ^[a-z0-9-]{1,32}$.
+                invalid_json:
+                  summary: Body is not JSON
+                  value:
+                    error: invalid_json
+                    message: Body is not valid JSON.
+                not_an_object:
+                  summary: Body is a JSON array
+                  value:
+                    error: not_an_object
+                    message: Body must be a JSON object.
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "429":
+          description: Creation rate limit exceeded, 20 per minute per IP.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: rate_limited
+                message: Too many blobs created. Try again in a minute.
+
+  /api/keeper-of-state/{app}/{id}:
+    parameters:
+      - $ref: "#/components/parameters/App"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [blobs]
+      operationId: getBlob
+      summary: Read a blob
+      description: |
+        Returns the stored object verbatim, with no envelope and no injected metadata,
+        so the response can be handed straight to `JSON.parse` and used as-is. The id
+        is the only credential needed, which is what makes a blob shareable by link.
+
+        `Last-Modified` reflects the most recent successful write. The app segment must
+        match the namespace the blob was created in; a mismatch is a 404 rather than a
+        403, so probing a known id against other apps leaks nothing.
+      security: []
+      responses:
+        "200":
+          description: The stored object.
+          headers:
+            Last-Modified:
+              $ref: "#/components/headers/LastModified"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Blob"
+              example:
+                title: Lisbon, October
+                traveler: gio
+                notes: book the Sintra train the night before
+                days:
+                  - date: "2026-10-03"
+                    city: Lisbon
+                    stops: [Time Out Market, Miradouro de Santa Catarina]
+                  - date: "2026-10-04"
+                    city: Sintra
+                    stops: [Quinta da Regaleira]
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [blobs]
+      operationId: replaceBlob
+      summary: Replace a blob wholesale
+      description: |
+        Overwrites the stored object with the request body. Anything you leave out is
+        gone, so send the whole document, not a fragment.
+
+        Last write wins. Two clients writing concurrently will not collide, error, or
+        merge; the later request simply survives. That is deliberate, and it is why
+        there is no `If-Match` support. Use PUT rather than PATCH when you need to
+        store an explicit `null` value, which merge-patch semantics cannot express.
+
+        Accepts either the owner key or a live temporary key.
+      security:
+        - editKey: []
+      requestBody:
+        required: true
+        description: The complete replacement object.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Blob"
+            example:
+              title: Lisbon and Sintra, October
+              traveler: gio
+              notes: null
+              days:
+                - date: "2026-10-03"
+                  city: Lisbon
+                  stops: [Time Out Market, Miradouro de Santa Catarina]
+                - date: "2026-10-04"
+                  city: Sintra
+                  stops: [Quinta da Regaleira, Castelo dos Mouros]
+                - date: "2026-10-05"
+                  city: Cascais
+                  stops: [Boca do Inferno]
+      responses:
+        "204":
+          description: Stored. No body is returned; re-read the blob if you want to confirm.
+          headers:
+            Last-Modified:
+              $ref: "#/components/headers/LastModified"
+        "400":
+          $ref: "#/components/responses/BadBody"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+    patch:
+      tags: [blobs]
+      operationId: patchBlob
+      summary: Merge-patch a blob
+      description: |
+        Applies an RFC 7386 JSON merge patch and returns the merged object, so an agent
+        can change one field without first fetching and re-sending the whole document.
+
+        Two RFC 7386 behaviours bite people, and both are intentional:
+
+        - A `null` value **deletes** that key rather than storing null. There is
+          therefore no way to store an explicit `null` through PATCH at all; use PUT.
+        - Arrays are replaced **wholesale**. There is no element-wise merge, no index
+          addressing, and no append. To add one day to a five-day trip, send all six.
+
+        Send `Content-Type: application/merge-patch+json` if your client can;
+        `application/json` is accepted as a convenience and treated identically.
+
+        Accepts either the owner key or a live temporary key.
+      security:
+        - editKey: []
+      requestBody:
+        required: true
+        description: |
+          The merge patch. Top-level nulls delete keys; arrays replace.
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: "#/components/schemas/MergePatch"
+            examples:
+              rename_and_drop_a_field:
+                summary: Rename the trip and delete the notes field
+                value:
+                  title: Lisbon and Sintra, October
+                  notes: null
+              replace_the_days_array:
+                summary: Arrays are replaced, so resend every element you want to keep
+                value:
+                  days:
+                    - date: "2026-10-03"
+                      city: Lisbon
+                      stops: [Time Out Market]
+                    - date: "2026-10-04"
+                      city: Sintra
+                      stops: [Quinta da Regaleira, Castelo dos Mouros]
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergePatch"
+            example:
+              title: Lisbon and Sintra, October
+              notes: null
+      responses:
+        "200":
+          description: The blob after the patch was applied.
+          headers:
+            Last-Modified:
+              $ref: "#/components/headers/LastModified"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Blob"
+              example:
+                title: Lisbon and Sintra, October
+                traveler: gio
+                days:
+                  - date: "2026-10-03"
+                    city: Lisbon
+                    stops: [Time Out Market, Miradouro de Santa Catarina]
+                  - date: "2026-10-04"
+                    city: Sintra
+                    stops: [Quinta da Regaleira]
+        "400":
+          $ref: "#/components/responses/BadBody"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/TooLarge"
+        "415":
+          description: |
+            The `Content-Type` header was present but names something other than
+            `application/merge-patch+json` or `application/json`. Parameters such as
+            `; charset=utf-8` are ignored, and the comparison is case-insensitive.
+
+            The handling of a *missing* `Content-Type` is deliberately asymmetric: it is
+            tolerated and the request proceeds as a merge patch. The reasoning is that a
+            forgetful agent should not be dead-ended by a header it does not know to
+            send, while a header that actively says something wrong is worth catching.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: unsupported_media_type
+                message: Use a content-type of application/json or application/merge-patch+json.
+    delete:
+      tags: [blobs]
+      operationId: deleteBlob
+      summary: Delete a blob permanently
+      description: |
+        Soft-deletes the blob. The row is retained so the id is never reissued, but the
+        API treats it as gone from this point on: every later read, write, patch, and
+        key operation on that id answers 404, including yours. There is no undelete and
+        no support request that can bring it back.
+
+        Owner key only. A temporary key gets 403, so an agent you handed a short-lived
+        credential cannot destroy the document it was asked to edit.
+      security:
+        - editKey: []
+      responses:
+        "204":
+          description: Deleted. Nothing further will succeed on this id.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            The key is valid but not permitted here, either because it belongs to a
+            different blob or because it is a temporary key and deletion is owner-only.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: forbidden
+                message: That action requires an owner key.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/keeper-of-state/{app}/{id}/keys:
+    parameters:
+      - $ref: "#/components/parameters/App"
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [keys]
+      operationId: createTemporaryKey
+      summary: Mint a temporary key for this blob
+      description: |
+        Mints a write key scoped to this one blob that stops working at `expires_at`.
+        This is the credential to hand to an external agent: it can read, PUT, and
+        PATCH, but it cannot delete the blob and cannot mint further keys, so the worst
+        case is a bad edit rather than a lost document.
+
+        `expires_in` is in seconds and is capped server-side at 86400 (24 hours). Values
+        that are zero, negative, non-integer, or above the cap are rejected outright
+        rather than silently clamped.
+
+        The returned `key` is shown once and is not stored in retrievable form. Mint a
+        new one if you lose it, and there is no way to list outstanding keys.
+
+        Owner key only.
+      security:
+        - editKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKeyRequest"
+            examples:
+              one_hour:
+                summary: A key for a single agent session
+                value:
+                  expires_in: 3600
+              maximum:
+                summary: The longest life the server will grant
+                value:
+                  expires_in: 86400
+      responses:
+        "201":
+          description: Key minted. This is the only time `key` is returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedKey"
+              example:
+                key: 5c1f9a72-63b8-4e02-8d4a-2f7e91b6c035
+                expires_at: "2026-08-08T18:42:11Z"
+        "400":
+          description: |
+            `expires_in` is missing, not a positive integer, or greater than the 86400
+            second cap.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                not_positive:
+                  summary: Zero or negative lifetime
+                  value:
+                    error: bad_request
+                    message: expires_in must be a positive integer number of seconds.
+                over_cap:
+                  summary: Longer than 24 hours
+                  value:
+                    error: bad_request
+                    message: expires_in must be at most 86400 seconds.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            The key is valid but not permitted here, either because it belongs to a
+            different blob or because it is a temporary key and minting is owner-only.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: forbidden
+                message: That action requires an owner key.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/keeper-of-state/{app}/{id}/keys/self:
+    parameters:
+      - $ref: "#/components/parameters/App"
+      - $ref: "#/components/parameters/Id"
+    delete:
+      tags: [keys]
+      operationId: revokeOwnKey
+      summary: Revoke the temporary key you are calling with
+      description: |
+        Revokes the key in the `Authorization` header. There is no key id in the path
+        and no way to revoke someone else's key; a caller can only give up its own
+        access. Hand this to an agent as the last step of its run so the credential dies
+        when the work does, without the owner having to intervene.
+
+        Idempotent by design: a key the server recognises returns 204 even if it was
+        already revoked or has already expired, so an agent retrying after a dropped
+        connection never sees a spurious failure.
+
+        Temporary keys only. An owner key gets 403, because revoking it would strand the
+        blob permanently, there being no key listing and no recovery path.
+      security:
+        - editKey: []
+      responses:
+        "204":
+          description: Revoked, or already was. The key will not authenticate again.
+        "401":
+          description: |
+            No `Authorization` header was sent (`missing_key`) or the key is not one
+            this server issued (`unknown_key`). Note that expired and already-revoked
+            keys succeed here rather than failing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                missing_key:
+                  value:
+                    error: missing_key
+                    message: "Provide the key as an Authorization: Bearer header."
+                unknown_key:
+                  value:
+                    error: unknown_key
+                    message: That key does not exist.
+        "403":
+          description: |
+            The key belongs to a different blob, or it is the owner key, which cannot
+            revoke itself.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: forbidden
+                message: Owner keys cannot be revoked.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    editKey:
+      type: http
+      scheme: bearer
+      bearerFormat: UUID
+      description: |
+        Send the owner key or a temporary key as `Authorization: Bearer <key>`. Keys are
+        UUIDs. The server stores only a hash, so a lost key cannot be recovered, only
+        replaced.
+
+  parameters:
+    App:
+      name: app
+      in: path
+      required: true
+      description: |
+        The app namespace the blob lives in, for example `itinerary`. Namespaces are
+        created implicitly on first write and exist only to group blobs and to scope
+        reads; they are not a security boundary, and a blob is only reachable through
+        the namespace it was created in.
+
+        `openapi.yaml` and `docs.md` are reserved by the discovery routes and cannot be
+        used as namespaces. Neither matches the naming pattern anyway.
+      schema:
+        $ref: "#/components/schemas/AppName"
+      example: itinerary
+    Id:
+      name: id
+      in: path
+      required: true
+      description: |
+        The blob id, generated by the server at creation. Fourteen characters drawn from
+        `23456789bcdfghjkmnpqrstvwxz`, an alphabet with no vowels and no lookalike
+        glyphs, which keeps ids unguessable, unable to spell anything, and safe to read
+        over the phone.
+      schema:
+        $ref: "#/components/schemas/BlobId"
+      example: q7fn2mkxbtr93d
+
+  headers:
+    LastModified:
+      description: |
+        HTTP-date of the most recent successful write to this blob. Useful for cheap
+        change detection, since there is no version number or ETag.
+      schema:
+        type: string
+      example: Sat, 08 Aug 2026 17:42:11 GMT
+
+  responses:
+    BadBody:
+      description: |
+        The body is not parseable JSON (`invalid_json`), or it parsed but is an array, a
+        scalar, or null rather than an object (`not_an_object`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            invalid_json:
+              value:
+                error: invalid_json
+                message: Body is not valid JSON.
+            not_an_object:
+              value:
+                error: not_an_object
+                message: Body must be a JSON object.
+    Unauthorized:
+      description: |
+        The key was absent or is not usable. `missing_key` means no `Authorization`
+        header, `unknown_key` means the server has no record of it, `key_expired` means
+        a temporary key is past `expires_at`, and `key_revoked` means it was
+        self-revoked. Revoked wins over expired when both apply.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            missing_key:
+              value:
+                error: missing_key
+                message: "Provide the key as an Authorization: Bearer header."
+            unknown_key:
+              value:
+                error: unknown_key
+                message: That key does not exist.
+            key_expired:
+              value:
+                error: key_expired
+                message: That key has expired.
+            key_revoked:
+              value:
+                error: key_revoked
+                message: That key has been revoked.
+    Forbidden:
+      description: The key is valid but grants no access to this blob.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: forbidden
+            message: That key does not grant access to this blob.
+    NotFound:
+      description: |
+        No blob answers to this app and id. The same 404 covers an id that never
+        existed, one that was deleted, and one that exists under a different app
+        namespace, so nothing about which case it is can be inferred.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: not_found
+            message: No blob with that id.
+    TooLarge:
+      description: The body exceeds the 102400 byte limit.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: too_large
+            message: Body exceeds the 102400 byte limit.
+
+  schemas:
+    Error:
+      type: object
+      description: The shape every error response in this API takes.
+      required: [error, message]
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+          description: Stable machine-readable code. Branch on this, not on the message.
+          enum:
+            - invalid_app
+            - invalid_json
+            - not_an_object
+            - bad_request
+            - missing_key
+            - unknown_key
+            - key_expired
+            - key_revoked
+            - forbidden
+            - not_found
+            - too_large
+            - rate_limited
+            - unsupported_media_type
+            - method_not_allowed
+        message:
+          type: string
+          description: Human-readable explanation. Wording may change between releases.
+      examples:
+        - error: not_found
+          message: No blob with that id.
+
+    AppName:
+      type: string
+      description: An app namespace. Lowercase letters, digits, and hyphens only.
+      pattern: ^[a-z0-9-]{1,32}$
+      minLength: 1
+      maxLength: 32
+      examples: [itinerary, units, scratch-pad]
+
+    BlobId:
+      type: string
+      description: A server-generated blob id.
+      pattern: ^[23456789bcdfghjkmnpqrstvwxz]{14}$
+      minLength: 14
+      maxLength: 14
+      examples: [q7fn2mkxbtr93d]
+
+    Blob:
+      type: object
+      description: |
+        The stored document. Any JSON object is accepted; the server never inspects,
+        validates, or rewrites its contents. It must be an object, not an array or a
+        scalar, and its serialised form must be at most 102400 bytes.
+      additionalProperties: true
+      examples:
+        - title: Lisbon, October
+          traveler: gio
+          notes: book the Sintra train the night before
+          days:
+            - date: "2026-10-03"
+              city: Lisbon
+              stops: [Time Out Market, Miradouro de Santa Catarina]
+            - date: "2026-10-04"
+              city: Sintra
+              stops: [Quinta da Regaleira]
+
+    MergePatch:
+      type: object
+      description: |
+        An RFC 7386 JSON merge patch. Keys present are set, keys set to `null` are
+        deleted, keys absent are left alone, and arrays are replaced whole.
+      additionalProperties: true
+      examples:
+        - title: Lisbon and Sintra, October
+          notes: null
+
+    Discovery:
+      type: object
+      description: Absolute links to the human guide and the machine-readable spec.
+      required: [docs, openapi]
+      additionalProperties: false
+      properties:
+        docs:
+          type: string
+          format: uri
+          description: URL of the Markdown usage guide.
+        openapi:
+          type: string
+          format: uri
+          description: URL of this OpenAPI document.
+
+    CreatedBlob:
+      type: object
+      description: The result of creating a blob, including its one and only owner key.
+      required: [id, edit_key, url, created_at]
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/BlobId"
+        edit_key:
+          type: string
+          format: uuid
+          description: |
+            The owner key. Returned here and never again, not stored in retrievable
+            form, and not recoverable. Save it now.
+        url:
+          type: string
+          format: uri
+          description: Absolute URL of the new blob, safe to share with readers.
+        created_at:
+          type: string
+          format: date-time
+          description: Creation time, UTC, second precision.
+      examples:
+        - id: q7fn2mkxbtr93d
+          edit_key: b3d6e2f1-8a4c-4d19-9f2e-71c05ab8e3d4
+          url: https://tools.giodamelio.com/api/keeper-of-state/itinerary/q7fn2mkxbtr93d
+          created_at: "2026-08-08T17:42:11Z"
+
+    CreateKeyRequest:
+      type: object
+      description: How long the new temporary key should live.
+      required: [expires_in]
+      additionalProperties: false
+      properties:
+        expires_in:
+          type: integer
+          description: |
+            Lifetime in seconds from now. Must be a positive integer no greater than
+            86400. Out-of-range values are rejected, not clamped.
+          minimum: 1
+          maximum: 86400
+          examples: [3600]
+      examples:
+        - expires_in: 3600
+
+    CreatedKey:
+      type: object
+      description: A freshly minted temporary key.
+      required: [key, expires_at]
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+          format: uuid
+          description: |
+            The temporary key, scoped to this blob. Returned here and never again.
+          examples: [5c1f9a72-63b8-4e02-8d4a-2f7e91b6c035]
+        expires_at:
+          type: string
+          format: date-time
+          description: |
+            When the key stops authenticating, UTC, second precision. After this instant
+            it answers `key_expired` on every route except self-revoke.
+      examples:
+        - key: 5c1f9a72-63b8-4e02-8d4a-2f7e91b6c035
+          expires_at: "2026-08-08T18:42:11Z"

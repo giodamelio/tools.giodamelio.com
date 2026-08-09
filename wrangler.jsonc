@@ -1,11 +1,44 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tools-giodamelio-com",
-  "compatibility_date": "2026-05-14",
-  "assets": {
-    "directory": "./src"
-  },
-  "routes": [
-    { "pattern": "tools.giodamelio.com", "custom_domain": true }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "tools-giodamelio-com",
+	"main": "worker/index.js",
+	"compatibility_date": "2026-05-14",
+	"assets": {
+		"directory": "./src",
+		"binding": "ASSETS"
+	},
+	"routes": [
+		{
+			"pattern": "tools.giodamelio.com",
+			"custom_domain": true
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "keeper-of-state",
+			"database_id": "d5a4697d-213a-4f77-a305-cb72fa3700ba",
+			"migrations_dir": "worker/migrations"
+		}
+	],
+	"rules": [
+		{
+			"type": "Text",
+			"globs": [
+				"**/*.yaml",
+				"**/*.md"
+			],
+			"fallthrough": true
+		}
+	],
+	"ratelimits": [
+		{
+			"name": "KEEPER_CREATE",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 20,
+				"period": 60
+			}
+		}
+	]
 }
