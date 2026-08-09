@@ -23,7 +23,7 @@
   # Local dev server with live reload (auto-refreshes the browser on change).
   # Start with `devenv up`; serves ./src on http://localhost:8788.
   # https://devenv.sh/processes/
-  processes.dev.exec = "wrangler pages dev src --live-reload --port 8788";
+  processes.dev.exec = "wrangler dev --live-reload --port 8788";
 
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
@@ -31,7 +31,13 @@
   '';
 
   tasks = {
-    "site:publish".exec = "wrangler pages deploy --branch main";
+    "site:publish".exec = "wrangler deploy";
+
+    # Uploads a version without routing production traffic to it, and prints a
+    # preview URL. Set PREVIEW_ALIAS to name the URL's subdomain label.
+    "site:publish:preview".exec = ''
+      wrangler versions upload --preview-alias "''${PREVIEW_ALIAS:-preview}"
+    '';
   };
 
   # https://devenv.sh/git-hooks/

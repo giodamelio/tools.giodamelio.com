@@ -2,5 +2,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tools-giodamelio-com",
   "compatibility_date": "2026-05-14",
-  "pages_build_output_dir": "src"
+  "assets": {
+    "directory": "./src"
+  },
+  "routes": [
+    { "pattern": "tools.giodamelio.com", "custom_domain": true }
+  ]
 }
