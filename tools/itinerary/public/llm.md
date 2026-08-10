@@ -131,13 +131,3 @@ curl -X DELETE \
 - Errors come back as `{"error": "<code>", "message": "..."}`. Branch on `error` and stop
   rather than retrying blindly. The full list is in the
   [Keeper of State docs](/api/keeper-of-state/docs.md).
-
-## Older links
-
-Links minted before the itinerary moved into the store carried the whole trip in the
-fragment, as `#1.<base64url>` or `#1u.<base64url>` — a deflated, dictionary-encoded
-positional array. Those still open. The app decodes one into an unsaved draft, and the
-first edit gives it a blob and an id of its own. Nothing generates that format any more.
-
-Between those and the path URLs above there was a short-lived `#<id>` form. Opening one
-redirects to the path.

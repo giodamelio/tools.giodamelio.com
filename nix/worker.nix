@@ -1,7 +1,6 @@
 {lib, ...}: {
   perSystem = {
     pkgs,
-    config,
     tools,
     ...
   }: let
@@ -19,17 +18,11 @@
 
     context = pkgs.writeText "routes.json" (builtins.toJSON {inherit routes;});
   in {
-    packages.worker = pkgs.runCommand "worker" {nativeBuildInputs = [pkgs.gomplate];} ''
+    # The one file under worker/ that Nix has to write. Everything else the
+    # Worker needs is either checked in beside it or is packages.site.
+    packages.tool-routes = pkgs.runCommand "tool-routes" {nativeBuildInputs = [pkgs.gomplate];} ''
       mkdir -p $out
-      cp ${../worker/index.js} $out/index.js
-      cp ${../worker/wrangler.jsonc} $out/wrangler.jsonc
-      cp -r ${../worker/keeper-of-state} $out/keeper-of-state
-      cp -r ${../worker/migrations} $out/migrations
-      cp -r ${config.packages.site} $out/public
-
       gomplate -c .=${context} -f ${../worker/tool-routes.js.tmpl} -o $out/tool-routes.js
-
-      chmod -R u+w $out
     '';
   };
 }

@@ -1,11 +1,13 @@
-// Paths here are relative to the assembled worker root that nix/worker.nix
-// builds, not to this file's place in the repo.
+// Paths here are relative to this file. The assets directory is not one of
+// them: it is a build output, so the scripts in nix/apps.nix pass the built
+// site as --assets rather than pinning a path that would go stale. The
+// `tool-routes.js` that index.js imports is generated too, and the devShell
+// links it in beside this file.
 {
 	"name": "tools-giodamelio-com",
 	"main": "index.js",
 	"compatibility_date": "2026-05-14",
 	"assets": {
-		"directory": "./public",
 		"binding": "ASSETS"
 	},
 	"routes": [

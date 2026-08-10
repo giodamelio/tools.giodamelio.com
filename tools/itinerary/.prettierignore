@@ -1,0 +1,4 @@
+dist
+public/llm.md
+src/lib/zone-data.ts
+package-lock.json

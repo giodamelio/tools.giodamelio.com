@@ -6,59 +6,79 @@
   }: let
     accountId = "dd00af6bb2aa48a10ddf29a3a20cf429";
 
-    # Wrangler writes .wrangler/ next to its config, so it cannot run from the
-    # read-only store. Sync into a fixed directory rather than a fresh temp one
-    # so local D1 state survives between runs.
-    syncWorker = ''
+    # Wrangler resolves `main` against its config, so it runs in worker/, where
+    # the config, the entry point and the migrations already are and where
+    # .wrangler/ can be written. Run these from the project root.
+    #
+    # index.js imports ./tool-routes.js, so relink it here rather than trusting
+    # the devShell to have done it: outside `nix develop` the file is missing and
+    # wrangler cannot resolve the import, and a shell opened before a tool's
+    # routes changed holds a link to an older store path, which would deploy a
+    # stale route table without complaining.
+    inWorker = ''
       export CLOUDFLARE_ACCOUNT_ID=${accountId}
-      worker="''${WORKER_DIR:-$PWD/.worker}"
-      mkdir -p "$worker"
-      # -rlt rather than -a: the store files are root-owned and read-only, so
-      # preserving owner, group and mode would both fail and be useless.
-      rsync -rlt --delete --chmod=u+rwX --exclude .wrangler \
-        ${config.packages.worker}/ "$worker/"
-      cd "$worker"
+      cd worker
+      ln -sfn ${config.packages.tool-routes}/tool-routes.js tool-routes.js
     '';
+
+    # The built site, passed rather than linked: it is a build output, and
+    # naming it here is what keeps every run serving what the sources say now.
+    site = "--assets ${config.packages.site}";
 
     scripts = {
       deploy = {
         text = ''
-          ${syncWorker}
-          exec wrangler deploy
+          ${inWorker}
+          exec wrangler deploy ${site}
         '';
-        inputs = [pkgs.rsync pkgs.wrangler];
+        inputs = [pkgs.wrangler];
       };
 
       deploy-preview = {
         text = ''
-          ${syncWorker}
-          exec wrangler versions upload --preview-alias "''${PREVIEW_ALIAS:-preview}"
+          ${inWorker}
+          exec wrangler versions upload ${site} --preview-alias "''${PREVIEW_ALIAS:-preview}"
         '';
-        inputs = [pkgs.rsync pkgs.wrangler];
+        inputs = [pkgs.wrangler];
       };
 
       serve = {
         text = ''
-          ${syncWorker}
-          exec wrangler dev --port 8788 "$@"
+          ${inWorker}
+          exec wrangler dev ${site} --port 8788 "$@"
         '';
-        inputs = [pkgs.rsync pkgs.wrangler];
+        inputs = [pkgs.wrangler];
       };
 
       keeper-migrate = {
         text = ''
-          ${syncWorker}
+          ${inWorker}
           exec wrangler d1 migrations apply keeper-of-state --local
         '';
-        inputs = [pkgs.rsync pkgs.wrangler];
+        inputs = [pkgs.wrangler];
       };
 
       keeper-migrate-remote = {
         text = ''
-          ${syncWorker}
+          ${inWorker}
           exec wrangler d1 migrations apply keeper-of-state --remote
         '';
-        inputs = [pkgs.rsync pkgs.wrangler];
+        inputs = [pkgs.wrangler];
+      };
+
+      # Local only: the demo trip the library links to exists in production, so
+      # without this the link 404s against a fresh D1. Runs after keeper-migrate.
+      keeper-seed = {
+        text = ''
+          root="$PWD"
+          ${inWorker}
+
+          sql="$(mktemp -d)/seed.sql"
+          node "$root/scripts/seed-demo-trip.js" > "$sql"
+          wrangler d1 execute keeper-of-state --local --file "$sql"
+          rm -rf "$(dirname "$sql")"
+        '';
+        inputs = [pkgs.nodejs pkgs.wrangler];
       };
 
       # The suite needs an oversize request body to prove the 100 KB limit; it

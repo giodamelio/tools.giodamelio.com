@@ -1,0 +1,354 @@
+/* The handful of shapes the whole tool is built from. Anything that appears in
+   more than one component lives here; anything that appears once lives in that
+   component's scoped block. */
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+}
+
+.btn.is-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.btn.is-muted {
+  color: var(--muted);
+}
+
+.btn.is-muted:hover {
+  color: var(--accent);
+}
+
+.btn.is-outline {
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn.is-outline:hover {
+  color: var(--accent);
+}
+
+.btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.btn.is-primary:hover {
+  border-color: var(--accent);
+  filter: brightness(1.08);
+}
+
+.btn.is-tinted {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.btn.is-tinted:hover {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.btn.is-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn.is-danger:hover {
+  background: var(--danger);
+  color: var(--bg);
+}
+
+.btn.is-solid-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.btn.is-lg {
+  border-radius: 9px;
+  padding: 11px 22px;
+  font-size: 14px;
+}
+
+.btn.is-sm {
+  border-radius: 7px;
+  height: 26px;
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn.is-tiny {
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+/* ── Chips ───────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 3px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip.is-static {
+  font-size: 11px;
+  padding: 1px 8px;
+  cursor: default;
+}
+
+.chip.is-filter {
+  padding: 2px 11px;
+}
+
+.chip-input {
+  font-size: 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 99px;
+  padding: 3px 12px;
+  width: 120px;
+  outline: none;
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+
+.field-label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Inputs contrast with whatever they sit on, so the container says which that
+   is rather than every input taking a variant. */
+.text-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--input-bg, var(--card));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 13px;
+  color: var(--fg);
+  text-transform: none;
+  letter-spacing: 0;
+  outline: none;
+}
+
+textarea.text-input {
+  border-radius: 10px;
+  padding: 12px 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 56px 20px;
+  overflow: auto;
+}
+
+.modal-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.modal-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.modal-body {
+  padding: 18px 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--rule);
+}
+
+.modal-close {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  padding: 0;
+}
+
+@media screen and (max-width: 860px) {
+  .modal-scrim {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal-card {
+    max-width: none !important;
+    border: 0;
+    border-radius: 0;
+    min-height: 100%;
+  }
+
+  .modal-card .btn {
+    min-height: 34px;
+  }
+}
+
+/* ── Menus and popovers ──────────────────────────────────────────────────── */
+
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: block;
+}
+
+.menu {
+  position: absolute;
+  z-index: 41;
+  display: grid;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--fg);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: var(--card);
+  color: var(--accent);
+}
+
+.menu-rule {
+  display: block;
+  height: 1px;
+  background: var(--rule);
+  margin: 4px 2px;
+}
+
+.popover {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  white-space: normal;
+}
+
+/* ── Status ──────────────────────────────────────────────────────────────── */
+
+.error-box {
+  font-size: 13px;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.error-box.is-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.spinner {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: itin-spin 0.8s linear infinite;
+}
+
+.spinner.is-small {
+  width: 20px;
+  height: 20px;
+}

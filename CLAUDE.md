@@ -15,14 +15,22 @@ A tool's `package.nix` takes `{ basePath, baseCss, ... }` and must:
 Keep the `...` in the argument set. Every tool is called with the same arguments and takes only what it
 needs; `tools/itinerary/package.nix` ignores `baseCss` and styles itself.
 
+"However it likes" includes a real build. Units copies files; the itinerary runs Vite over a Vue 3 app
+and is pinned by its own `package-lock.json`, which `importNpmLock` reads directly — there is no vendor
+hash to keep in step with the lockfile. A tool that builds should run its typecheck and unit tests in
+the same `buildPhase`, so a broken one fails `nix build` rather than only the editor. Leave linting
+out: a formatting rule must not be able to block a deploy.
+
 ## Let the base tag carry the mount path
 
 **`basePath` has exactly one consumer: the `<base href>` in `index.html`,** substituted at build time
 from an `@basePath@` placeholder. Everything else in a tool is relative and resolves against it, and JS
-that needs the mount path reads `document.baseURI` — see `BASE` in `tools/itinerary/itinerary.js`.
+that needs the mount path reads `document.baseURI` — see `BASE` in `tools/itinerary/src/router.ts`,
+which is what the router's history base is built from.
 
 Never hardcode a tool's own prefix. This is what lets the worker serve the itinerary page at
-`/itinerary/<id>` without a relative `./itinerary.js` resolving a directory too deep.
+`/itinerary/<id>` without a relative `./assets/index.js` resolving a directory too deep. A tool built
+with Vite therefore sets `base: './'`, and rewrites `@basePath@` to `/` for the dev server only.
 
 `routes` are patterns relative to the tool's own mount, so they mean the same thing wherever it is
 mounted. `nix/worker.nix` prefixes them and generates `tool-routes.js`; the worker itself knows nothing
@@ -55,22 +63,30 @@ HTML through `html`.
 | `nix run .#deploy` | ships to production |
 | `nix run .#deploy-preview` | uploads a preview version; set `PREVIEW_ALIAS` to name it |
 | `nix run .#keeper-migrate` / `-remote` | applies D1 migrations |
+| `nix run .#keeper-seed` | writes the itinerary's demo trip into the local D1 |
 | `nix run .#keeper-test` | runs the Hurl suite against `KEEPER_BASE`, default localhost:8788 |
-| `nix run .#zones` | refreshes `tools/itinerary/zone-data.js` from tzdb |
+| `nix run .#zones` | refreshes `tools/itinerary/src/lib/zone-data.ts` from tzdb |
 
-They are on `PATH` by bare name inside `nix develop`.
+They are on `PATH` by bare name inside `nix develop`, and they expect to be run from the project root.
 
-Wrangler cannot run from the read-only store, so these scripts sync the built worker into `.worker/`
-and run there. That directory holds local D1 state between runs; deleting it is safe.
+Wrangler runs in `worker/` against the checked-in `wrangler.jsonc`, so nothing is copied anywhere.
+Two pieces are not checked in: `worker/tool-routes.js`, which `index.js` imports and both the devShell
+and every wrangler script link in from the store, and the built site, which the scripts pass as
+`--assets` so every run serves what the sources say now. `worker/.wrangler/` holds local D1 state between runs; deleting it
+is safe, and `nix run .#keeper-migrate` builds it back.
 
-Nix is not the inner loop. A tool with a dev server runs it natively from its own directory; `nix run
-.#serve` is how you see the whole site assembled.
+That D1 starts empty, which is why the itinerary's "View a demo trip" link 404s locally even though
+the same blob answers in production. `nix run .#keeper-seed` writes it in, after the migrations.
+
+Nix is not the inner loop. A tool with a dev server runs it natively from its own directory — `npm run
+dev` in `tools/itinerary/`, which proxies `/api` to port 8788, so run `nix run .#serve` alongside it for
+the API. `nix run .#serve` on its own is how you see the whole site assembled.
 
 ## Match the JavaScript style of each side
 
-Each tool picks its own. Units is dependency-free vanilla JS; the itinerary is classic scripts talking
-through globals, pending a rewrite. Code under `worker/` is ESM because the Workers runtime requires
-modules.
+Each tool picks its own. Units is dependency-free vanilla JS. The itinerary is Vue 3 and TypeScript:
+`<script setup>`, Pinia setup stores, shared shapes in `src/styles/controls.css` and everything else in
+a scoped block. Code under `worker/` is ESM because the Workers runtime requires modules.
 
 ## Use jujutsu
 

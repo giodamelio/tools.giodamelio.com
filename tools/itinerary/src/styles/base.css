@@ -1,0 +1,70 @@
+html {
+  scrollbar-gutter: stable;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--fg);
+}
+
+input,
+select,
+button,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+@keyframes itin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The page as a sheet of paper: one column, centred, with room to breathe. */
+.sheet {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+@media screen and (max-width: 860px) {
+  .sheet {
+    padding: 24px 16px 72px;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .sheet {
+    padding: 0;
+    max-width: none;
+  }
+}

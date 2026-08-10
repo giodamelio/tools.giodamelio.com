@@ -37,7 +37,7 @@ own several documents in the same tool, and a single `tool.key` entry breaks the
 they open a second one:
 
 ```js
-// localStorage["itin-keys"] -> { "k7m3qxbn9fd2rt": "9f2c7a51-…" }
+// localStorage["itin-library"] -> { v: 1, items: [{ id: "k7m3qxbn9fd2rt", role: "owner", key: "9f2c7a51-…" }] }
 ```
 
 A visitor holding a link but no key gets a read-only view. Decide up front what that looks
@@ -81,7 +81,7 @@ cannot delete the data and cannot mint keys for anyone else.
 
 The prompt should carry the base URL, app, id, key, and the wall-clock time the key dies,
 plus instructions to `PATCH` rather than `PUT` and to `DELETE /keys/self` when finished.
-`tools/itinerary/itinerary.js` builds one; copy its shape.
+`tools/itinerary/src/lib/agent.ts` builds one; copy its shape.
 
 Two things to tell the user, not just the agent. Last write wins, so a tool that autosaves
 will overwrite whatever the agent just wrote — the page must sit still while an agent has

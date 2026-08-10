@@ -1,0 +1,56 @@
+:root {
+  color-scheme: dark light;
+  --bg: #111418;
+  --fg: #e6e6e6;
+  --muted: #9aa0a6;
+  --accent: #6ea8ff;
+  --border: #2a2f36;
+  --card: #1a1e24;
+  --rule: #22272e;
+  --p0: oklch(0.8 0.11 210);
+  --p1: oklch(0.8 0.11 155);
+  --p2: oklch(0.8 0.11 75);
+  --p3: oklch(0.8 0.11 320);
+  --p4: oklch(0.8 0.11 265);
+  --p5: oklch(0.8 0.11 25);
+  --danger: oklch(0.72 0.16 25);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --accent: #2563eb;
+  --border: #e5e5e5;
+  --card: #fafafa;
+  --rule: #ececec;
+  --p0: oklch(0.47 0.14 210);
+  --p1: oklch(0.47 0.14 155);
+  --p2: oklch(0.47 0.14 75);
+  --p3: oklch(0.47 0.14 320);
+  --p4: oklch(0.47 0.14 265);
+  --p5: oklch(0.47 0.14 25);
+  --danger: oklch(0.52 0.19 25);
+}
+
+/* Paper is white whatever the screen was, and the palette has to hold its
+   distinctions at print contrast. */
+@media print {
+  [data-theme] {
+    --bg: #fff;
+    --fg: #111;
+    --muted: #555;
+    --accent: #111;
+    --border: #ccc;
+    --card: #fff;
+    --rule: #ddd;
+    --p0: oklch(0.45 0.14 210);
+    --p1: oklch(0.45 0.14 155);
+    --p2: oklch(0.45 0.14 75);
+    --p3: oklch(0.45 0.14 320);
+    --p4: oklch(0.45 0.14 265);
+    --p5: oklch(0.45 0.14 25);
+    --danger: oklch(0.45 0.18 25);
+  }
+}
