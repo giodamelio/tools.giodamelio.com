@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Regenerates src/itinerary/zone-data.js. Run it with
-// `devenv tasks run itinerary:zones`.
+// Regenerates tools/itinerary/zone-data.js. Run it with `nix run .#zones`.
 //
 // The browser supplies the list of zones that exist, through
 // Intl.supportedValuesOf. This file supplies what the browser cannot:
@@ -21,7 +20,7 @@ import { writeFile } from "node:fs/promises";
 
 const TZDB = "https://cdn.jsdelivr.net/npm/@vvo/tzdb";
 const BACKWARD = "https://data.iana.org/time-zones/tzdb/backward";
-const OUT = new URL("../src/itinerary/zone-data.js", import.meta.url);
+const OUT = new URL("../tools/itinerary/zone-data.js", import.meta.url);
 
 async function get(url) {
   const res = await fetch(url);
@@ -60,7 +59,7 @@ const rows = names.map((name) => {
   return [name, (olderNames.get(name) || []).sort(), fact.country, fact.cities];
 });
 
-const body = `/* GENERATED — do not edit. Rebuild with \`devenv tasks run itinerary:zones\`.
+const body = `/* GENERATED — do not edit. Rebuild with \`nix run .#zones\`.
    Renames from the IANA tzdb \`backward\` file; country and cities from @vvo/tzdb ${version}.
    Each row is [ current name, [older names], country, [major cities] ]. */
 window.ITIN_ZONE_DATA = ${JSON.stringify(rows)};

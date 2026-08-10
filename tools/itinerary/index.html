@@ -8,6 +8,7 @@
       name="description"
       content="A shareable travel itinerary that lives entirely in its own URL."
     />
+    <base href="@basePath@" />
 <style>
   :root {
     color-scheme: dark light;
@@ -231,7 +232,7 @@
 
     <sc-if value="{{ isTrip }}">
     <header class="app-header" style="margin-bottom:44px">
-      <a class="no-print" href="/itinerary/" title="All itineraries" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;font-size:12px;color:var(--muted);text-decoration:none" style-hover="color:var(--accent)">
+      <a class="no-print" href="./" title="All itineraries" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;font-size:12px;color:var(--muted);text-decoration:none" style-hover="color:var(--accent)">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
         All itineraries
       </a>
@@ -967,11 +968,11 @@
 </div>
     </template>
 
-    <!-- Root-relative: this page is also served at /itinerary/<id> and
-         /itinerary/<id>/edit, where a relative src would resolve one or two
-         directories too deep. -->
-    <script src="/itinerary/zone-data.js"></script>
-    <script src="/itinerary/render.js"></script>
-    <script src="/itinerary/itinerary.js"></script>
+    <!-- Relative, and correct even though this page is also served at
+         <base>/<id> and <base>/<id>/edit, because the <base> tag above pins
+         where they resolve from. -->
+    <script src="./zone-data.js"></script>
+    <script src="./render.js"></script>
+    <script src="./itinerary.js"></script>
   </body>
 </html>

@@ -1,9 +1,5 @@
 import { handleKeeperOfState } from "./keeper-of-state/routes.js";
-
-// /itinerary/<id> and /itinerary/<id>/edit are read by the page off its own
-// path. Matching the id alphabet exactly keeps this from shadowing the real
-// assets that sit alongside it, like /itinerary/render.js.
-const ITINERARY_PAGE = /^\/itinerary\/[23456789bcdfghjkmnpqrstvwxz]{14}(?:\/edit)?\/?$/;
+import { TOOL_ROUTES } from "./tool-routes.js";
 
 export default {
   async fetch(request, env) {
@@ -16,8 +12,11 @@ export default {
       return handleKeeperOfState(request, env, url);
     }
 
-    if (ITINERARY_PAGE.test(url.pathname)) {
-      return env.ASSETS.fetch(new Request(new URL("/itinerary/", url), request));
+    // Tools that own sub-paths — a permalink, an editor — declare them in
+    // their derivation and get their own index.html served for the match.
+    const route = TOOL_ROUTES.find((candidate) => candidate.pattern.test(url.pathname));
+    if (route) {
+      return env.ASSETS.fetch(new Request(new URL(route.page, url), request));
     }
 
     return env.ASSETS.fetch(request);

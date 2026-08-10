@@ -8,7 +8,9 @@
       name="description"
       content="A collection of small, single-purpose web tools."
     />
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="site.css" />
+    <link rel="alternate" type="text/markdown" href="index.md" />
   </head>
   <body>
     <main>
@@ -18,18 +20,14 @@
       </header>
 
       <ul class="tools">
+{{- range .tools }}
         <li>
-          <a href="/units.html">
-            <span class="name">Units</span>
-            <span class="desc">A quick reference for common unit conversions</span>
+          <a href="{{ .mount }}">
+            <span class="name">{{ .name | html }}</span>
+            <span class="desc">{{ .description | html }}</span>
           </a>
         </li>
-        <li>
-          <a href="/itinerary/">
-            <span class="name">Itinerary</span>
-            <span class="desc">Plan a trip across time zones, then share it with a link</span>
-          </a>
-        </li>
+{{- end }}
       </ul>
 
       <footer>

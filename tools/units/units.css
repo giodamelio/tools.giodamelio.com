@@ -1,0 +1,421 @@
+main {
+  margin: 0 auto;
+}
+
+/* Cheat-sheet layout: each section is a flex child holding one table, so
+   sections reflow into as many columns as fit — 1 on mobile, more as the
+   screen grows. Flex items are atomic, so a section never splits internally.
+   This is also the pre-JS fallback for the grid-lanes rules further down. */
+.sheet {
+  max-width: 1500px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.sheet > section {
+  flex: 1 1 21rem;
+  padding: 0.9rem 1.1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.sheet > section h2 {
+  margin-top: 0;
+}
+
+section h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+
+th:last-child,
+td:last-child {
+  padding-right: 0;
+}
+
+thead th {
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--accent);
+  white-space: nowrap;
+}
+
+tbody tr:hover {
+  background: var(--card);
+}
+
+td .sym,
+th .sym {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.navbar {
+  max-width: 1500px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+/* Masonry layout via the grid-lanes polyfill (see masonry.js).
+   `display: grid-lanes` is dropped by today's browsers, so the flex rules
+   above act as the pre-JS fallback; the polyfill keys off
+   --grid-lanes-polyfill and packs the section cards into balanced lanes. */
+.sheet {
+  --grid-lanes-polyfill: 1;
+  display: grid-lanes;
+  grid-template-columns: repeat(auto-fill, minmax(23rem, 1fr));
+  gap: 1.25rem;
+  /* The polyfill sets minHeight to exactly fit the tallest lane; use
+     content-box so this bottom padding adds breathing room below the
+     cards instead of being clipped into that height. */
+  box-sizing: content-box;
+  padding-bottom: 1rem;
+}
+/* Only the monospace symbol/formula cells may break anywhere (so a long
+   base-unit formula like kg·m²/(s³·A²) wraps instead of forcing a
+   horizontal scroll). Quantity-name cells keep normal word wrapping so
+   names break at spaces, never mid-word. */
+.sheet td.sym {
+  overflow-wrap: anywhere;
+}
+.navbar .back {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.navbar .back:hover {
+  background: var(--card);
+  border-color: var(--border);
+}
+.navbar .back svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.navbar .title {
+  flex: 1000 1 auto;
+  min-width: 8rem;
+}
+.navbar .title h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  line-height: 1.2;
+}
+.navbar .title p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.navbar .search {
+  flex: 1 1 14rem;
+  min-width: 9rem;
+  padding: 0.4rem 0.7rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.navbar .search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+tbody tr.match {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+tbody mark {
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 2px;
+  /* No horizontal padding: it would widen the matched run and reflow the
+     cell, making the text wrap oddly. Keep the highlight zero-width-impact. */
+  padding: 0;
+}
+
+/* Click a unit row to open its equations modal (see script at end). A
+   small arrow on the right edge marks rows that are tappable (shows
+   without hover, for touch). */
+.sheet tbody tr.convertible {
+  cursor: pointer;
+  --arrow-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23000'%20stroke-width='2.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cline%20x1='5'%20y1='12'%20x2='19'%20y2='12'/%3E%3Cpolyline%20points='12%205%2019%2012%2012%2019'/%3E%3C/svg%3E");
+}
+.sheet tbody tr.convertible td:last-child {
+  position: relative;
+  padding-right: 1.4rem;
+}
+/* A drawn arrow (SVG via mask) rather than a bare glyph: crisp, and
+   tinted with the accent var so it follows the light/dark theme. Matches
+   the navbar back-arrow style, pointing right. */
+.sheet tbody tr.convertible td:last-child::after {
+  content: "";
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  width: 0.85rem;
+  height: 0.85rem;
+  transform: translateY(-50%);
+  background-color: var(--accent);
+  -webkit-mask: var(--arrow-icon) center / contain no-repeat;
+  mask: var(--arrow-icon) center / contain no-repeat;
+  opacity: 0.5;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.sheet tbody tr.convertible:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.sheet tbody tr.convertible:hover td:last-child::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(2px);
+}
+.modal[hidden] {
+  display: none;
+}
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+}
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 30rem;
+  max-height: 85vh;
+  overflow: auto;
+  padding: 1.25rem 1.4rem 1.5rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.modal-card h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.25rem;
+}
+.modal-sub {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.modal-close:hover {
+  color: var(--fg);
+  background: var(--card);
+  border-color: var(--border);
+}
+.modal h3 {
+  margin: 1.1rem 0 0.5rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+}
+.modal h3:first-child {
+  margin-top: 0.25rem;
+}
+.eqn {
+  margin-bottom: 0.6rem;
+  padding: 0.55rem 0.7rem 0.65rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.eqn-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.eqn-f {
+  flex: 1 1 auto;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    monospace;
+  font-size: 1rem;
+}
+.eqn-name {
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-align: right;
+}
+.eqn-calc {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.eqn-calc:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.eqn-calc[aria-expanded="true"] {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.eqn-calc svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.eqn-solve {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.7rem;
+  margin-top: 0.7rem;
+}
+.eqn-solve[hidden] {
+  display: none;
+}
+.eqn-var {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.eqn-var-name {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+.eqn-var-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.eqn-var input {
+  width: 4.5rem;
+  padding: 0.25rem 0.4rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+/* The box being solved for is disabled and shows the result in accent. */
+.eqn-var input:disabled {
+  color: var(--accent);
+  -webkit-text-fill-color: var(--accent);
+  font-weight: 600;
+  background: var(--bg);
+  border-color: var(--accent);
+  opacity: 1;
+  cursor: default;
+}
+.eqn-unit {
+  padding: 0.25rem 0.3rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.eqn-unit-fixed {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.eqn-out {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.eqn-out b {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    monospace;
+  font-weight: 600;
+}
+.qlink {
+  color: var(--accent);
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    monospace;
+}
+.qlink:hover {
+  text-decoration: underline;
+}
+.modal-note {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.modal-note svg {
+  width: 0.95em;
+  height: 0.95em;
+  vertical-align: -0.15em;
+}
+/* Tighten the top spacing on small screens. */
+@media (max-width: 640px) {
+  body {
+    padding-top: 1rem;
+  }
+  .navbar {
+    margin-bottom: 1rem;
+  }
+}

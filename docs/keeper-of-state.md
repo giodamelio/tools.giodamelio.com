@@ -70,8 +70,8 @@ There are no CORS headers. A page on tools.giodamelio.com can call the API becau
 same-origin; nothing else can. Use a root-relative URL (`/api/keeper-of-state/{app}`) so
 the tool works against local dev and production without a build step.
 
-`devenv up` runs the Worker and the static assets together on `http://localhost:8788`, so
-local dev is same-origin too. `devenv tasks run keeper:migrate` sets up the local D1 first.
+`nix run .#serve` runs the Worker and the static assets together on `http://localhost:8788`,
+so local dev is same-origin too. `nix run .#keeper-migrate` sets up the local D1 first.
 
 ## Hand a key to an agent
 
@@ -81,7 +81,7 @@ cannot delete the data and cannot mint keys for anyone else.
 
 The prompt should carry the base URL, app, id, key, and the wall-clock time the key dies,
 plus instructions to `PATCH` rather than `PUT` and to `DELETE /keys/self` when finished.
-`src/itinerary/itinerary.js` builds one; copy its shape.
+`tools/itinerary/itinerary.js` builds one; copy its shape.
 
 Two things to tell the user, not just the agent. Last write wins, so a tool that autosaves
 will overwrite whatever the agent just wrote — the page must sit still while an agent has

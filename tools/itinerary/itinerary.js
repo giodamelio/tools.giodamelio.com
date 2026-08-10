@@ -20,7 +20,9 @@
 
   const EVERYONE = "Everyone";
 
-  const LLM_DOC = "https://tools.giodamelio.com/itinerary/llm.md";
+  /* Shown to the user to hand to an agent, so it has to be absolute. Derived
+     from where the tool is mounted rather than hardcoded. */
+  const LLM_DOC = new URL("llm.md", document.baseURI).href;
 
   const MODELS = [
     ["google/gemini-2.5-flash", "Gemini 2.5 Flash", "Fast and cheap; good at pulling structure out of emails", true],
@@ -325,11 +327,23 @@
     if (!res.ok) throw await apiFailure(res);
   }
 
+  /* Where this tool is mounted, from the <base> tag the build stamps in. The
+     tool never hardcodes its own prefix, so it can be served from anywhere. */
+  const BASE = new URL(document.baseURI).pathname;
+
   function tripPath(id, editing) {
-    return "/itinerary/" + id + (editing ? "/edit" : "");
+    return BASE + id + (editing ? "/edit" : "");
   }
 
-  const ROUTE_RE = /^\/itinerary\/([23456789bcdfghjkmnpqrstvwxz]{14})(?:\/(edit))?\/?$/;
+  /* Matches the path below BASE, so this is the same pattern the tool
+     publishes in its derivation for the worker to route on. */
+  const ROUTE_RE = /^([23456789bcdfghjkmnpqrstvwxz]{14})(?:\/(edit))?\/?$/;
+
+  function currentRoute() {
+    const path = location.pathname;
+    if (!path.startsWith(BASE)) return null;
+    return ROUTE_RE.exec(path.slice(BASE.length));
+  }
 
   function emptyDoc() {
     return { title: UNTITLED, roster: [], tzMode: "local", entries: [] };
@@ -827,7 +841,7 @@
           .catch(err => failed("This itinerary could not be opened — " + (err.message || String(err)) + "."));
       };
 
-      const route = ROUTE_RE.exec(location.pathname);
+      const route = currentRoute();
       if (route) {
         open(route[1], route[2] === "edit");
         return;

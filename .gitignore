@@ -1,8 +1,3 @@
-# Devenv
-.devenv*
-devenv.local.nix
-devenv.local.yaml
-
 # direnv
 .direnv
 
@@ -12,8 +7,14 @@ devenv.local.yaml
 # Nix
 /result
 
+# The writable worker root the scripts sync the build into
+/.worker
+
 # Wrangler
 /.wrangler
+
+# Left over from devenv; safe to delete
+/.devenv
 
 # Scratch notes
 /TODO.md

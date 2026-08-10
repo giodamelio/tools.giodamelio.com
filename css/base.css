@@ -1,0 +1,38 @@
+/* Colours, box model, and body typography. Nothing that assumes a page
+   layout — a tool takes this and builds whatever it likes on top, or skips it
+   entirely and styles itself from scratch. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --accent: #2563eb;
+  --border: #e5e5e5;
+  --card: #fafafa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111418;
+    --fg: #e6e6e6;
+    --muted: #9aa0a6;
+    --accent: #6ea8ff;
+    --border: #2a2f36;
+    --card: #1a1e24;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  line-height: 1.6;
+  color: var(--fg);
+  background: var(--bg);
+  margin: 0;
+  padding: 2rem 1rem;
+}
