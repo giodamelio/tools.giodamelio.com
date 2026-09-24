@@ -1,0 +1,13 @@
+server: https://vikunja.gio.ninja
+project_id: 6
+project_identifier: TOOLS
+view_id: 24
+buckets:
+    todo: 22
+    in_progress: 23
+    in_review: 25
+    done: 24
+    scrapped: 26
+bot:
+    username: bot-tools-giodamelio-com
+    user_id: 5
