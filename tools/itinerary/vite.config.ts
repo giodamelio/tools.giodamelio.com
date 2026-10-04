@@ -26,6 +26,7 @@ export default defineConfig({
   },
 
   server: {
+    port: 8779,
     // `nix run .#serve` in another terminal backs this with the real worker.
     proxy: {
       "/api": "http://localhost:8788",
