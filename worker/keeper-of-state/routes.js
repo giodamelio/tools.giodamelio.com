@@ -1,8 +1,16 @@
 import docsMarkdown from "./docs.md";
 import openapiYaml from "./openapi.yaml";
-import { authorize, authorizeSelfRevoke, createOwnerKey, mintTemporaryKey, revokeKeyById } from "./auth.js";
+import {
+  authorize,
+  authorizeRedeem,
+  authorizeSelfRevoke,
+  createOwnerKey,
+  mintInvite,
+  mintTemporaryKey,
+  revokeKeyById,
+} from "./auth.js";
 import { apiError, isValidApp, json, noContent, readJsonObject, textResponse } from "./http.js";
-import { createBlob, getBlob, replaceBlob, softDeleteBlob } from "./store.js";
+import { createBlob, getBlob, redeemInviteKey, replaceBlob, softDeleteBlob } from "./store.js";
 
 const PREFIX = "/api/keeper-of-state";
 const DISCOVERY_CACHE_CONTROL = "public, max-age=300";
@@ -151,6 +159,32 @@ async function mintKey(request, env, app, id) {
   return json({ key: minted.key, expires_at: minted.expires_at }, { status: 201 });
 }
 
+async function createInvite(request, env, app, id) {
+  const blob = await getBlob(env.DB, app, id);
+  if (!blob) return notFound();
+
+  const auth = await authorize(env.DB, request, id, true);
+  if (!auth.ok) return apiError(auth.status, auth.code, auth.message);
+
+  return json(await mintInvite(env.DB, id), { status: 201 });
+}
+
+async function redeem(request, env, app, id) {
+  const blob = await getBlob(env.DB, app, id);
+  if (!blob) return notFound();
+
+  const auth = await authorizeRedeem(env.DB, request, id);
+  if (!auth.ok) return apiError(auth.status, auth.code, auth.message);
+
+  // authorizeRedeem saw it unredeemed, but a concurrent redeem may have claimed it since.
+  if (!(await redeemInviteKey(env.DB, auth.key.id))) {
+    return apiError(409, "invite_used", "That invite has already been redeemed.");
+  }
+
+  const { key } = await createOwnerKey(env.DB, id);
+  return json({ edit_key: key }, { status: 201 });
+}
+
 async function revokeSelf(request, env, app, id) {
   const blob = await getBlob(env.DB, app, id);
   if (!blob) return notFound();
@@ -212,6 +246,16 @@ export async function handleKeeperOfState(request, env, url) {
   if (parts.length === 3 && parts[2] === "keys") {
     if (method !== "POST") return methodNotAllowed(["POST"]);
     return mintKey(request, env, parts[0], parts[1]);
+  }
+
+  if (parts.length === 3 && parts[2] === "invites") {
+    if (method !== "POST") return methodNotAllowed(["POST"]);
+    return createInvite(request, env, parts[0], parts[1]);
+  }
+
+  if (parts.length === 4 && parts[2] === "invites" && parts[3] === "redeem") {
+    if (method !== "POST") return methodNotAllowed(["POST"]);
+    return redeem(request, env, parts[0], parts[1]);
   }
 
   if (parts.length === 4 && parts[2] === "keys" && parts[3] === "self") {

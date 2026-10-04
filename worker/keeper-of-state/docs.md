@@ -25,20 +25,23 @@ than retrying blindly.
 
 ## Routes
 
-| Method   | Path                    | Auth      | Success                                   |
-|----------|-------------------------|-----------|-------------------------------------------|
-| `GET`    | `/`                     | none      | `200` discovery links                     |
-| `GET`    | `/openapi.yaml`         | none      | `200` the OpenAPI 3.1 spec                |
-| `GET`    | `/docs.md`              | none      | `200` this document                       |
-| `POST`   | `/{app}`                | none      | `201` `{ id, edit_key, url, created_at }` |
-| `GET`    | `/{app}/{id}`           | none      | `200` the stored object                   |
-| `PUT`    | `/{app}/{id}`           | any key   | `204`                                     |
-| `PATCH`  | `/{app}/{id}`           | any key   | `200` the merged object                   |
-| `DELETE` | `/{app}/{id}`           | owner key | `204`                                     |
-| `POST`   | `/{app}/{id}/keys`      | owner key | `201` `{ key, expires_at }`               |
-| `DELETE` | `/{app}/{id}/keys/self` | that key  | `204`                                     |
+| Method   | Path                         | Auth      | Success                                   |
+|----------|------------------------------|-----------|-------------------------------------------|
+| `GET`    | `/`                          | none      | `200` discovery links                     |
+| `GET`    | `/openapi.yaml`              | none      | `200` the OpenAPI 3.1 spec                |
+| `GET`    | `/docs.md`                   | none      | `200` this document                       |
+| `POST`   | `/{app}`                     | none      | `201` `{ id, edit_key, url, created_at }` |
+| `GET`    | `/{app}/{id}`                | none      | `200` the stored object                   |
+| `PUT`    | `/{app}/{id}`                | any key   | `204`                                     |
+| `PATCH`  | `/{app}/{id}`                | any key   | `200` the merged object                   |
+| `DELETE` | `/{app}/{id}`                | owner key | `204`                                     |
+| `POST`   | `/{app}/{id}/keys`           | owner key | `201` `{ key, expires_at }`               |
+| `DELETE` | `/{app}/{id}/keys/self`      | that key  | `204`                                     |
+| `POST`   | `/{app}/{id}/invites`        | owner key | `201` `{ invite, expires_at }`            |
+| `POST`   | `/{app}/{id}/invites/redeem` | invite    | `201` `{ edit_key }`                      |
 
-`GET`, `PUT`, and `PATCH` on a blob all return a `Last-Modified` header.
+`GET`, `PUT`, and `PATCH` on a blob all return a `Last-Modified` header. An invite is not a
+key: it works on the redeem route and nowhere else.
 
 ## Authenticate
 
@@ -52,8 +55,9 @@ cannot be rotated out of a blob you no longer control.
 
 Two kinds of key exist.
 
-An **owner key** comes back exactly once, from the create call. It never expires. It can
-read, replace, merge, delete the blob, and mint temporary keys. It cannot revoke itself.
+An **owner key** comes back exactly once, from the create call or from redeeming an
+invite. It never expires. It can read, replace, merge, delete the blob, mint temporary
+keys, and mint invites. It cannot revoke itself.
 
 A **temporary key** is minted by an owner key with an `expires_in` lifetime, capped at
 86400 seconds. It can read, replace, merge, and revoke itself. It cannot delete the blob
@@ -265,6 +269,47 @@ Revoking is the real hygiene, not the expiry. The moment your task is done the k
 stop working; the lifetime you were given is only a backstop for the case where you crash
 or get interrupted.
 
+## Share ownership with an invite
+
+An invite hands a full owner key to someone else without you ever sending them yours.
+`POST /{app}/{id}/invites` with an owner key, no body.
+
+```sh
+curl -X POST https://tools.giodamelio.com/api/keeper-of-state/itinerary/k7m3qxbn9fd2rt/invites \
+  -H 'Authorization: Bearer 9f2c7a51-3d84-4b6e-9c0a-71e5d8f43b62'
+```
+
+```json
+{
+  "invite": "b3e81f2a-6c47-4d90-a51e-0f9c2d7b4e18",
+  "expires_at": "2026-08-09T17:04:22Z"
+}
+```
+
+Every invite lives for 24 hours and redeems once. The person you send it to calls
+`POST /{app}/{id}/invites/redeem` with the invite as the bearer token:
+
+```sh
+curl -X POST \
+  https://tools.giodamelio.com/api/keeper-of-state/itinerary/k7m3qxbn9fd2rt/invites/redeem \
+  -H 'Authorization: Bearer b3e81f2a-6c47-4d90-a51e-0f9c2d7b4e18'
+```
+
+```json
+{
+  "edit_key": "e027c4b9-1f53-4a8d-96e2-58bd0a3fc761"
+}
+```
+
+That `edit_key` is a new owner key with every power yours has, including deleting the
+blob and inviting others, and like yours it cannot be revoked. Nothing lists the owners of
+a blob, so only invite someone you would hand the blob to outright.
+
+A second redeem gets `409 invite_used`, even when two arrive at once, and a redeem after
+24 hours gets `401 key_expired`. The invite itself is refused everywhere else with `403
+forbidden`. Neither the invite nor the key it becomes is ever shown again, so store the key
+the moment it arrives.
+
 ## Delete a blob
 
 `DELETE /{app}/{id}` needs the owner key.
@@ -305,12 +350,14 @@ Branch on `error`. The `message` is for humans and may change.
 | `forbidden`              | 403    | Key is valid but not allowed to do this                          |
 | `not_found`              | 404    | No such blob, or it was deleted                                  |
 | `method_not_allowed`     | 405    | Right path shape, wrong method — see the `Allow` header          |
+| `invite_used`            | 409    | Invite was already redeemed                                      |
 | `too_large`              | 413    | Request body exceeds 100 KB                                      |
 | `unsupported_media_type` | 415    | `PATCH` sent a `Content-Type` that is not a JSON one             |
 | `rate_limited`           | 429    | More than 20 creates in a minute from this IP                    |
 
-`forbidden` covers three cases: a temporary key trying to delete the blob, a temporary
-key trying to mint another key, and a valid key used against a blob it does not belong
+`forbidden` covers five cases: a temporary key trying to delete the blob, a temporary key
+trying to mint another key or an invite, an invite used as a key, a key that is not an
+invite sent to the redeem route, and a valid key used against a blob it does not belong
 to. That last one is `forbidden` rather than `not_found`, so a wrong-blob mistake looks
 different from a deleted blob.
 

@@ -16,12 +16,16 @@ info:
 
     There are two kinds of key, both UUIDs, both sent as `Authorization: Bearer <key>`:
 
-    - The **owner key** (`edit_key`) is returned once when you create a blob and never
-      again. It can read, write, delete, and mint temporary keys. There is no way to
-      list or recover it, so store it before you close the tab.
+    - The **owner key** (`edit_key`) is returned once when you create a blob or redeem
+      an invite, and never again. It can read, write, delete, mint temporary keys, and
+      mint invites. There is no way to list or recover it, so store it before you close
+      the tab.
     - A **temporary key** is minted from the owner key with an expiry of at most 24
       hours. It can read, write, and revoke itself. It cannot delete the blob or mint
       further keys.
+
+    An **invite** is minted from an owner key, lives 24 hours, and redeems exactly once
+    for a new owner key. It is not a key: every route but redeem refuses it.
 
     ## Limits and behaviour
 
@@ -61,6 +65,8 @@ info:
     | `/api/keeper-of-state/{app}/{id}` | `GET, PUT, PATCH, DELETE` |
     | `/api/keeper-of-state/{app}/{id}/keys` | `POST` |
     | `/api/keeper-of-state/{app}/{id}/keys/self` | `DELETE` |
+    | `/api/keeper-of-state/{app}/{id}/invites` | `POST` |
+    | `/api/keeper-of-state/{app}/{id}/invites/redeem` | `POST` |
 
     There is no `OPTIONS` handling and no preflight support, since the API sends no CORS
     headers in the first place.
@@ -76,6 +82,8 @@ tags:
     description: Creating, reading, replacing, patching, and deleting stored JSON objects.
   - name: keys
     description: Minting and revoking the short-lived keys handed to agents.
+  - name: invites
+    description: Single-use links that hand a new owner key to another person.
 
 security: []
 
@@ -603,6 +611,108 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/keeper-of-state/{app}/{id}/invites:
+    parameters:
+      - $ref: "#/components/parameters/App"
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [invites]
+      operationId: createInvite
+      summary: Mint a single-use invite to co-own this blob
+      description: |
+        Mints an invite that someone else redeems for an owner key of their own, so you
+        never have to send them yours. It lives for 24 hours, a fixed lifetime with no
+        request body, and redeems once.
+
+        The key it becomes has every power an owner key has, including deleting the blob
+        and minting further invites, and it cannot be revoked. Nothing lists the owners
+        of a blob.
+
+        Owner key only.
+      security:
+        - editKey: []
+      responses:
+        "201":
+          description: Invite minted. This is the only time `invite` is returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedInvite"
+              example:
+                invite: 7a40c2e9-5d16-4f8b-b39a-0e6d21c8f574
+                expires_at: "2026-08-09T17:42:11Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: |
+            The key is valid but not permitted here: it belongs to a different blob, it
+            is a temporary key, or it is an invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: forbidden
+                message: That action requires an owner key.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/keeper-of-state/{app}/{id}/invites/redeem:
+    parameters:
+      - $ref: "#/components/parameters/App"
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [invites]
+      operationId: redeemInvite
+      summary: Trade an invite for an owner key
+      description: |
+        Send the invite as `Authorization: Bearer <invite>`, no body. The first redeem
+        wins and gets a new owner key; any later one, including one racing it, gets
+        `invite_used`.
+      security:
+        - editKey: []
+      responses:
+        "201":
+          description: Redeemed. This is the only time `edit_key` is returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemedInvite"
+              example:
+                edit_key: e027c4b9-1f53-4a8d-96e2-58bd0a3fc761
+        "401":
+          description: |
+            No `Authorization` header (`missing_key`), an invite the server never issued
+            (`unknown_key`), or one past its 24 hours (`key_expired`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: key_expired
+                message: That invite has expired.
+        "403":
+          description: |
+            The token is not an invite, or it is an invite for a different blob.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: forbidden
+                message: Only an invite can be redeemed.
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The invite was already redeemed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: invite_used
+                message: That invite has already been redeemed.
+
 components:
   securitySchemes:
     editKey:
@@ -749,6 +859,7 @@ components:
             - key_revoked
             - forbidden
             - not_found
+            - invite_used
             - too_large
             - rate_limited
             - unsupported_media_type
@@ -886,3 +997,38 @@ components:
       examples:
         - key: 5c1f9a72-63b8-4e02-8d4a-2f7e91b6c035
           expires_at: "2026-08-08T18:42:11Z"
+
+    CreatedInvite:
+      type: object
+      description: A freshly minted invite.
+      required: [invite, expires_at]
+      additionalProperties: false
+      properties:
+        invite:
+          type: string
+          format: uuid
+          description: |
+            The invite, scoped to this blob. Returned here and never again.
+          examples: [7a40c2e9-5d16-4f8b-b39a-0e6d21c8f574]
+        expires_at:
+          type: string
+          format: date-time
+          description: When the invite stops redeeming, UTC, second precision.
+      examples:
+        - invite: 7a40c2e9-5d16-4f8b-b39a-0e6d21c8f574
+          expires_at: "2026-08-09T17:42:11Z"
+
+    RedeemedInvite:
+      type: object
+      description: The owner key an invite became.
+      required: [edit_key]
+      additionalProperties: false
+      properties:
+        edit_key:
+          type: string
+          format: uuid
+          description: |
+            A new owner key. Returned here and never again, and not recoverable.
+          examples: [e027c4b9-1f53-4a8d-96e2-58bd0a3fc761]
+      examples:
+        - edit_key: e027c4b9-1f53-4a8d-96e2-58bd0a3fc761

@@ -276,7 +276,77 @@ jsonpath "$.error" == "forbidden"
 jsonpath "$.message" exists
 
 
-# Phase 12 — bodies over 100 KB are rejected.
+# Phase 12 — an owner mints an invite, which redeems exactly once for a new
+# owner key and can never be used as a key itself.
+
+POST {{base}}/api/keeper-of-state/hurl-test/{{id}}/invites
+Authorization: Bearer {{edit_key}}
+
+HTTP 201
+[Captures]
+invite: jsonpath "$.invite"
+[Asserts]
+header "content-type" startsWith "application/json"
+jsonpath "$.invite" exists
+jsonpath "$.expires_at" matches /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
+
+PUT {{base}}/api/keeper-of-state/hurl-test/{{id}}
+Authorization: Bearer {{invite}}
+Content-Type: application/json
+{
+  "name": "written with an invite"
+}
+
+HTTP 403
+[Asserts]
+jsonpath "$.error" == "forbidden"
+jsonpath "$.message" exists
+
+# Only an invite redeems; an owner key is turned away.
+POST {{base}}/api/keeper-of-state/hurl-test/{{id}}/invites/redeem
+Authorization: Bearer {{edit_key}}
+
+HTTP 403
+[Asserts]
+jsonpath "$.error" == "forbidden"
+jsonpath "$.message" exists
+
+POST {{base}}/api/keeper-of-state/hurl-test/{{id}}/invites/redeem
+Authorization: Bearer {{invite}}
+
+HTTP 201
+[Captures]
+invited_key: jsonpath "$.edit_key"
+[Asserts]
+jsonpath "$.edit_key" exists
+
+POST {{base}}/api/keeper-of-state/hurl-test/{{id}}/invites/redeem
+Authorization: Bearer {{invite}}
+
+HTTP 409
+[Asserts]
+jsonpath "$.error" == "invite_used"
+jsonpath "$.message" exists
+
+# The redeemed key is a full owner key: it writes, and it mints keys of its own.
+PUT {{base}}/api/keeper-of-state/hurl-test/{{id}}
+Authorization: Bearer {{invited_key}}
+Content-Type: application/json
+{
+  "name": "written by the invited owner"
+}
+
+HTTP 204
+
+POST {{base}}/api/keeper-of-state/hurl-test/{{id}}/invites
+Authorization: Bearer {{invited_key}}
+
+HTTP 201
+[Captures]
+spare_invite: jsonpath "$.invite"
+
+
+# Phase 13 — bodies over 100 KB are rejected.
 
 PUT {{base}}/api/keeper-of-state/hurl-test/{{id}}
 Authorization: Bearer {{edit_key}}
@@ -289,7 +359,7 @@ jsonpath "$.error" == "too_large"
 jsonpath "$.message" exists
 
 
-# Phase 13 — discovery endpoints, all unauthenticated.
+# Phase 14 — discovery endpoints, all unauthenticated.
 
 GET {{base}}/api/keeper-of-state/
 
@@ -314,7 +384,7 @@ header "content-type" startsWith "text/markdown"
 body contains "Keeper of State"
 
 
-# Phase 14 — the owner deletes the blob, and it stays gone.
+# Phase 15 — the owner deletes the blob, and it stays gone.
 
 DELETE {{base}}/api/keeper-of-state/hurl-test/{{id}}
 Authorization: Bearer {{edit_key}}
@@ -333,6 +403,14 @@ Content-Type: application/json
 {
   "name": "after the delete"
 }
+
+HTTP 404
+[Asserts]
+jsonpath "$.error" == "not_found"
+
+# An invite outstanding when the blob went away redeems for nothing.
+POST {{base}}/api/keeper-of-state/hurl-test/{{id}}/invites/redeem
+Authorization: Bearer {{spare_invite}}
 
 HTTP 404
 [Asserts]

@@ -71,6 +71,16 @@ export async function findKeyByHash(db, keyHash) {
   return await db.prepare("SELECT * FROM keys WHERE key_hash = ?").bind(keyHash).first();
 }
 
+// The guard on redeemed_at is what makes an invite single-use: of two concurrent redeems, only
+// one changes the row.
+export async function redeemInviteKey(db, keyId) {
+  const result = await db
+    .prepare("UPDATE keys SET redeemed_at = ? WHERE id = ? AND kind = 'invite' AND redeemed_at IS NULL")
+    .bind(nowIso(), keyId)
+    .run();
+  return result.meta.changes === 1;
+}
+
 export async function revokeKey(db, keyId) {
   await db
     .prepare("UPDATE keys SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL")

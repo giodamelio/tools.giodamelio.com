@@ -1,6 +1,7 @@
 import { findKeyByHash, insertKey, nowIso, revokeKey } from "./store.js";
 
 export const MAX_EXPIRES_IN = 86400;
+export const INVITE_LIFETIME = 86400;
 
 const BEARER_PATTERN = /^\s*Bearer\s+(\S+)\s*$/i;
 
@@ -58,8 +59,38 @@ export async function authorize(db, request, blobId, requireOwner) {
     return deny(403, "forbidden", "That key does not grant access to this blob.");
   }
 
+  if (key.kind === "invite") {
+    return deny(403, "forbidden", "An invite can only be redeemed, not used as a key.");
+  }
+
   if (requireOwner && key.kind !== "owner") {
     return deny(403, "forbidden", "That action requires an owner key.");
+  }
+
+  return { ok: true, key };
+}
+
+export async function authorizeRedeem(db, request, blobId) {
+  const found = await lookupKey(db, request);
+  if (!found.ok) return found;
+
+  const { key } = found;
+
+  if (key.kind !== "invite") {
+    return deny(403, "forbidden", "Only an invite can be redeemed.");
+  }
+
+  if (key.blob_id !== blobId) {
+    return deny(403, "forbidden", "That invite does not grant access to this blob.");
+  }
+
+  // Used wins over expired: the person holding it needs to hear that someone else got there first.
+  if (key.redeemed_at) {
+    return deny(409, "invite_used", "That invite has already been redeemed.");
+  }
+
+  if (Date.parse(key.expires_at) <= Date.now()) {
+    return deny(401, "key_expired", "That invite has expired.");
   }
 
   return { ok: true, key };
@@ -79,6 +110,10 @@ export async function authorizeSelfRevoke(db, request, blobId) {
 
   if (key.kind === "owner") {
     return deny(403, "forbidden", "Owner keys cannot be revoked.");
+  }
+
+  if (key.kind === "invite") {
+    return deny(403, "forbidden", "An invite can only be redeemed, not used as a key.");
   }
 
   return { ok: true, key };
@@ -104,6 +139,13 @@ export async function mintTemporaryKey(db, blobId, expiresIn) {
   await insertKey(db, blobId, await hashKey(key), "temporary", expiresAt);
 
   return { ok: true, key, expires_at: expiresAt };
+}
+
+export async function mintInvite(db, blobId) {
+  const expiresAt = secondsIso(Date.parse(nowIso()) + INVITE_LIFETIME * 1000);
+  const invite = crypto.randomUUID();
+  await insertKey(db, blobId, await hashKey(invite), "invite", expiresAt);
+  return { invite, expires_at: expiresAt };
 }
 
 export async function revokeKeyById(db, keyId) {
