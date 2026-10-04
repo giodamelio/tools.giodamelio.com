@@ -5,12 +5,10 @@ import type { LibraryItem } from "../types";
 import { useLibraryStore } from "../stores/library";
 import { useSettingsStore } from "../stores/settings";
 import { createBlob, deleteBlob } from "../lib/keeper";
-import { emptyDoc, UNTITLED } from "../lib/doc";
+import { DEMO_ID, emptyDoc, UNTITLED } from "../lib/doc";
 import { tripPath } from "../router";
 import LibraryRow from "../components/LibraryRow.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
-
-const DEMO_ID = "3pwsf4hhwx5n6s";
 
 const router = useRouter();
 const library = useLibraryStore();
@@ -23,6 +21,7 @@ interface Removal {
   id: string;
   title: string;
   mode: "forget" | "delete";
+  owned: boolean;
 }
 
 const pending = ref<Removal | null>(null);
@@ -56,7 +55,12 @@ async function createItinerary() {
 
 function ask(item: LibraryItem, mode: "forget" | "delete") {
   removalError.value = "";
-  pending.value = { id: item.id, title: item.title || UNTITLED, mode };
+  pending.value = {
+    id: item.id,
+    title: item.title || UNTITLED,
+    mode,
+    owned: item.role === "owner",
+  };
 }
 
 const removalTitle = computed(() =>
@@ -65,9 +69,11 @@ const removalTitle = computed(() =>
 
 const removalBody = computed(() => {
   if (!pending.value) return "";
-  return pending.value.mode === "delete"
-    ? `“${pending.value.title}” will be erased. Everyone you gave the link to loses it too, not just you, and there is no undo.`
-    : `“${pending.value.title}” disappears from this list on this device. Your link keeps working, but you will not be able to change the itinerary again.`;
+  if (pending.value.mode === "delete")
+    return `“${pending.value.title}” will be erased. Everyone you gave the link to loses it too, not just you, and there is no undo.`;
+  return pending.value.owned
+    ? `“${pending.value.title}” disappears from this list on this device. Your link keeps working, but you will not be able to change the itinerary again.`
+    : `“${pending.value.title}” disappears from this list on this device. Open its link again to bring it back.`;
 });
 
 const removalConfirmLabel = computed(() => {
@@ -122,6 +128,9 @@ async function confirmRemoval() {
     <div class="hdr-row">
       <h1 class="hdr-title">Itineraries</h1>
       <div class="hdr-actions">
+        <button v-if="library.items.length" class="btn is-primary" @click="createItinerary">
+          {{ creating ? "Creating…" : "Create itinerary" }}
+        </button>
         <button
           class="btn is-icon"
           title="Toggle theme"
@@ -150,27 +159,34 @@ async function confirmRemoval() {
     </div>
   </div>
 
-  <template v-else>
-    <ul class="rows">
-      <LibraryRow
-        v-for="item in library.items"
-        :key="item.id"
-        :item="item"
-        @forget="ask(item, 'forget')"
-        @delete="ask(item, 'delete')"
-      />
-    </ul>
-    <div class="below">
-      <button class="btn is-primary" @click="createItinerary">
-        {{ creating ? "Creating…" : "Create itinerary" }}
-      </button>
-      <RouterLink class="demo-link" :to="tripPath(DEMO_ID, false)">
-        View a demo trip
-      </RouterLink>
-    </div>
-  </template>
-
   <div v-if="createError" class="error-box spaced">{{ createError }}</div>
+
+  <template v-if="library.items.length">
+    <section v-if="library.owned.length" class="section">
+      <h2 class="section-title">My itineraries</h2>
+      <ul class="rows">
+        <LibraryRow
+          v-for="item in library.owned"
+          :key="item.id"
+          :item="item"
+          @forget="ask(item, 'forget')"
+          @delete="ask(item, 'delete')"
+        />
+      </ul>
+    </section>
+
+    <section v-if="library.viewed.length" class="section">
+      <h2 class="section-title">Viewed itineraries</h2>
+      <ul class="rows">
+        <LibraryRow
+          v-for="item in library.viewed"
+          :key="item.id"
+          :item="item"
+          @forget="ask(item, 'forget')"
+        />
+      </ul>
+    </section>
+  </template>
 
   <ConfirmDialog
     v-if="pending"
@@ -261,23 +277,25 @@ async function confirmRemoval() {
   color: var(--accent);
 }
 
+.section-title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section + .section {
+  margin-top: 40px;
+}
+
 .rows {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 8px;
-}
-
-.below {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.demo-link {
-  font-size: 13px;
 }
 
 .spaced {

@@ -1,15 +1,14 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { Library, LibraryItem } from "../types";
 import { readBlob } from "../lib/keeper";
 import { readJson, writeJson } from "../lib/storage";
 
 const LIBRARY_STORE = "itin-library";
 
-/* The library is every itinerary this browser knows about. `role` is "owner"
-   today and carries the key that lets you write. It is the seam for following
-   someone else's itinerary later — such a record would drop `key` and render
-   without the editing affordances. */
+/* The library is every itinerary this browser knows about. An "owner" carries
+   the key that lets you write; a "viewer" is someone else's itinerary that was
+   opened here by link, kept with an empty key so it renders read-only. */
 function readLibrary(): Library {
   const stored = readJson<Library>(LIBRARY_STORE);
   if (!stored || !Array.isArray(stored.items)) return { v: 1, items: [] };
@@ -23,6 +22,13 @@ function writeLibrary(library: Library): void {
 export const useLibraryStore = defineStore("library", () => {
   const items = ref<LibraryItem[]>(readLibrary().items);
   const busy = ref(false);
+
+  const owned = computed(() => items.value.filter((it) => it.role === "owner"));
+  const viewed = computed(() =>
+    items.value
+      .filter((it) => it.role === "viewer")
+      .sort((a, b) => (b.viewed ?? "").localeCompare(a.viewed ?? "")),
+  );
 
   function reload() {
     items.value = readLibrary().items;
@@ -54,6 +60,14 @@ export const useLibraryStore = defineStore("library", () => {
     }
     writeLibrary(library);
     items.value = library.items;
+  }
+
+  /* Read fresh rather than from `items`: another tab may have created the
+     itinerary since this one loaded, and an owner must never be demoted. */
+  function noteViewed(id: string, title: string, modified: string): void {
+    const existing = readLibrary().items.find((it) => it.id === id);
+    if (existing?.role === "owner") return;
+    remember(id, { role: "viewer", title, modified, viewed: new Date().toISOString() });
   }
 
   function forget(id: string): void {
@@ -102,5 +116,17 @@ export const useLibraryStore = defineStore("library", () => {
     }
   }
 
-  return { items, busy, reload, itemFor, keyFor, remember, forget, refresh };
+  return {
+    items,
+    owned,
+    viewed,
+    busy,
+    reload,
+    itemFor,
+    keyFor,
+    remember,
+    noteViewed,
+    forget,
+    refresh,
+  };
 });

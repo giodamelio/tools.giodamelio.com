@@ -15,9 +15,11 @@ const shared = ref(false);
 
 const title = computed(() => props.item.title || UNTITLED);
 const owned = computed(() => props.item.role === "owner" && !!props.item.key);
-const note = computed(() =>
-  props.item.modified ? `Edited ${shortStamp(props.item.modified)}` : "Not opened yet",
-);
+const note = computed(() => {
+  if (props.item.role === "viewer" && props.item.viewed)
+    return `Viewed ${shortStamp(props.item.viewed)}`;
+  return props.item.modified ? `Edited ${shortStamp(props.item.modified)}` : "Not opened yet";
+});
 
 async function share() {
   menuOpen.value = false;
@@ -78,10 +80,14 @@ function choose(what: "forget" | "delete") {
             <button class="menu-item grow" @click="choose('forget')">
               Forget on this device
             </button>
-            <InfoTip label="What does forgetting do?">
+            <InfoTip v-if="owned" label="What does forgetting do?">
               Takes it off this list, on this device only. The itinerary itself stays put and
               any link you shared keeps working — but you give up the ability to change it, and
               that cannot be undone.
+            </InfoTip>
+            <InfoTip v-else label="What does forgetting do?">
+              Takes it off this list, on this device only. The itinerary itself stays put, and
+              opening its link again brings it back.
             </InfoTip>
           </span>
 

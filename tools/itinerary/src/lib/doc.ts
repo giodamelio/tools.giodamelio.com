@@ -9,6 +9,8 @@ const TEXT_KEYS: readonly EntryText[] = ["from", "to", "operator", "service", "n
 
 export const UNTITLED = "Untitled trip";
 
+export const DEMO_ID = "3pwsf4hhwx5n6s";
+
 export function emptyDoc(): TripDoc {
   return { title: UNTITLED, roster: [], colors: {}, tzMode: "local", entries: [] };
 }

@@ -4,7 +4,7 @@
 //
 // Production already holds this document under this id, so the library links to it
 // unconditionally; a local D1 starts empty and the link 404s until this runs. The
-// id is the DEMO_ID in tools/itinerary/src/views/LibraryView.vue — change one and
+// id is the DEMO_ID in tools/itinerary/src/lib/doc.ts — change one and
 // change the other.
 
 const ID = "3pwsf4hhwx5n6s";

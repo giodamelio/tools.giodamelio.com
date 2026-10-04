@@ -52,11 +52,12 @@ export interface TripState {
 
 export interface LibraryItem {
   id: string;
-  role: "owner";
+  role: "owner" | "viewer";
   key: string;
   title: string;
   created: string;
   modified: string;
+  viewed?: string;
 }
 
 export interface Library {

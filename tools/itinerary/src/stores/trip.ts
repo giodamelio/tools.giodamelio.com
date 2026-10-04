@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref, watch } from "vue";
 import type { AgentKey, Entry, SaveState, SmartAction, TripState } from "../types";
-import { colorMap, fromDoc, nextPeople, rosterOrder, toDoc } from "../lib/doc";
+import { colorMap, DEMO_ID, fromDoc, nextPeople, rosterOrder, toDoc } from "../lib/doc";
 import { mintAgentKey, readBlob, writeBlob } from "../lib/keeper";
 import { newEntryId } from "../lib/id";
 import { router, tripPath } from "../router";
@@ -156,6 +156,13 @@ export const useTripStore = defineStore("trip", () => {
       adopt(fromDoc(found.doc));
       blobId.value = id;
       canEdit.value = !!library.keyFor(id);
+      if (id !== DEMO_ID) {
+        library.noteViewed(
+          id,
+          title.value,
+          found.modified ? new Date(found.modified).toISOString() : "",
+        );
+      }
       baseline = docJson.value;
       saveState.value = "idle";
     } catch (err) {
