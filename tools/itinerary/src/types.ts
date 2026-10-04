@@ -77,6 +77,11 @@ export interface AgentKey {
   expires_at: string;
 }
 
+export interface Invite {
+  invite: string;
+  expires_at: string;
+}
+
 export type SaveState = "idle" | "unsaved" | "saving" | "saved" | "error";
 
 /* What Smart Add proposes, before you have accepted any of it. `aid` is this

@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { computed, ref, watch } from "vue";
 import type { AgentKey, Entry, SaveState, SmartAction, TripState } from "../types";
 import { colorMap, DEMO_ID, fromDoc, nextPeople, rosterOrder, toDoc } from "../lib/doc";
-import { mintAgentKey, readBlob, writeBlob } from "../lib/keeper";
+import { mintAgentKey, readBlob, redeemInvite, writeBlob } from "../lib/keeper";
 import { newEntryId } from "../lib/id";
 import { router, tripPath } from "../router";
 import { useLibraryStore } from "./library";
@@ -27,6 +27,7 @@ export const useTripStore = defineStore("trip", () => {
   const canEdit = ref(false);
   const loading = ref(true);
   const loadError = ref("");
+  const inviteError = ref("");
 
   const saveState = ref<SaveState>("idle");
   const saveError = ref("");
@@ -142,21 +143,43 @@ export const useTripStore = defineStore("trip", () => {
     tzMode.value = next.tzMode;
   }
 
-  async function load(id: string): Promise<void> {
+  /* A browser that can already edit keeps the invite unspent for whoever it
+     was meant for. A failed redeem still opens the itinerary, read-only. */
+  async function redeem(id: string, invite: string): Promise<boolean> {
+    if (library.keyFor(id)) return false;
+    try {
+      const key = await redeemInvite(id, invite);
+      library.remember(id, { role: "owner", key, created: new Date().toISOString() });
+      return true;
+    } catch (err) {
+      inviteError.value = `This invite could not be used — ${reason(err)}. You can still read the itinerary.`;
+      return false;
+    }
+  }
+
+  async function load(id: string, invite = ""): Promise<void> {
     loading.value = true;
     loadError.value = "";
+    inviteError.value = "";
     openId.value = null;
     detailId.value = null;
     openPicker.value = null;
     agentKey.value = null;
 
     try {
+      const redeemed = invite ? await redeem(id, invite) : false;
       const found = await readBlob(id);
       if (!found) throw new Error("it was deleted, or the link is wrong");
       adopt(fromDoc(found.doc));
       blobId.value = id;
       canEdit.value = !!library.keyFor(id);
-      if (id !== DEMO_ID) {
+      if (redeemed) {
+        library.remember(id, {
+          title: title.value,
+          modified: found.modified ? new Date(found.modified).toISOString() : "",
+        });
+        void router.replace(tripPath(id, true));
+      } else if (id !== DEMO_ID) {
         library.noteViewed(
           id,
           title.value,
@@ -285,6 +308,7 @@ export const useTripStore = defineStore("trip", () => {
     canEdit,
     loading,
     loadError,
+    inviteError,
     saveState,
     saveError,
     agentKey,

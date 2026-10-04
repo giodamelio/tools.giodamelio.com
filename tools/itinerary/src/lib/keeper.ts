@@ -1,4 +1,4 @@
-import type { AgentKey, CreatedBlob, TripDoc } from "../types";
+import type { AgentKey, CreatedBlob, Invite, TripDoc } from "../types";
 
 /* Absolute on purpose: the API is one thing wherever this tool is mounted. */
 const API = "/api/keeper-of-state/itinerary";
@@ -16,6 +16,7 @@ const API_TROUBLE: Record<string, string> = {
   forbidden: "this browser is not allowed to do that",
   rate_limited: "the server is asking you to slow down, so wait a minute",
   too_large: "this itinerary has grown too big to save",
+  invite_used: "someone has already used this invite",
 };
 
 export class KeeperError extends Error {
@@ -106,6 +107,25 @@ export async function mintAgentKey(
   });
   if (!res.ok) throw await apiFailure(res);
   return (await res.json()) as AgentKey;
+}
+
+export async function mintInvite(id: string, key: string): Promise<Invite> {
+  const res = await fetch(`${API}/${id}/invites`, {
+    method: "POST",
+    headers: authorized(key),
+  });
+  if (!res.ok) throw await apiFailure(res);
+  return (await res.json()) as Invite;
+}
+
+/* Answers the owner key the invite became. */
+export async function redeemInvite(id: string, invite: string): Promise<string> {
+  const res = await fetch(`${API}/${id}/invites/redeem`, {
+    method: "POST",
+    headers: authorized(invite),
+  });
+  if (!res.ok) throw await apiFailure(res);
+  return ((await res.json()) as { edit_key: string }).edit_key;
 }
 
 /* Shown to an agent, so it has to be absolute. */

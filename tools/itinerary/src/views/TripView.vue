@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { EVERYONE, type Entry, type EntryType } from "../types";
 import { SAVE_NOTES } from "../lib/schema";
 import { newEntryId } from "../lib/id";
@@ -16,17 +16,25 @@ import CalendarView from "../components/CalendarView.vue";
 import EntryDialog from "../components/EntryDialog.vue";
 import SettingsDialog from "../components/SettingsDialog.vue";
 import HandoffDialog from "../components/HandoffDialog.vue";
+import InviteDialog from "../components/InviteDialog.vue";
 import SmartAddDialog from "../components/SmartAddDialog.vue";
 
 const route = useRoute();
+const router = useRouter();
 const trip = useTripStore();
 const settings = useSettingsStore();
 
 usePrintPageSize(computed(() => settings.view));
 
+/* Taken out of the address bar straight away, used or not: Share copies the
+   current URL, and must never pass an invite along with it. */
 watch(
   () => route.params.id,
-  (id) => void trip.load(String(id)),
+  (id) => {
+    const invite = new URLSearchParams(route.hash.slice(1)).get("invite") ?? "";
+    if (invite) void router.replace({ hash: "" });
+    void trip.load(String(id), invite);
+  },
   { immediate: true },
 );
 
@@ -36,6 +44,7 @@ const hiddenTypes = ref<EntryType[]>([]);
 const draft = ref<Entry | null>(null);
 const settingsOpen = ref(false);
 const handoffOpen = ref(false);
+const inviteOpen = ref(false);
 const smartOpen = ref(false);
 const smartHintOpen = ref(false);
 const copied = ref(false);
@@ -261,6 +270,14 @@ function doPrint() {
           Hand off to an assistant
         </button>
 
+        <button
+          class="btn is-tinted is-sm"
+          title="Make a one-time link that gives one other person full control of this itinerary"
+          @click="inviteOpen = true"
+        >
+          Invite Editor
+        </button>
+
         <button class="btn is-primary is-sm" title="Add an item" @click="openDraft(null)">
           <svg
             viewBox="0 0 24 24"
@@ -290,6 +307,9 @@ function doPrint() {
       </div>
 
       <div v-if="trip.loadError" class="error-box spaced">{{ trip.loadError }}</div>
+      <div v-else-if="trip.inviteError" class="no-print error-box spaced">
+        {{ trip.inviteError }}
+      </div>
 
       <TripToolbar
         v-if="!trip.loadError"
@@ -306,6 +326,11 @@ function doPrint() {
     <EntryDialog v-if="draft" v-model="draft" @close="draft = null" @commit="commitDraft" />
     <SettingsDialog v-if="settingsOpen" @close="settingsOpen = false" />
     <HandoffDialog v-if="handoffOpen" @close="handoffOpen = false" />
+    <InviteDialog
+      v-if="inviteOpen && trip.blobId"
+      :id="trip.blobId"
+      @close="inviteOpen = false"
+    />
     <SmartAddDialog v-if="smartOpen" @close="smartOpen = false" />
   </template>
 </template>

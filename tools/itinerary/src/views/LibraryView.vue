@@ -9,6 +9,7 @@ import { DEMO_ID, emptyDoc, UNTITLED } from "../lib/doc";
 import { tripPath } from "../router";
 import LibraryRow from "../components/LibraryRow.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import InviteDialog from "../components/InviteDialog.vue";
 
 const router = useRouter();
 const library = useLibraryStore();
@@ -25,6 +26,7 @@ interface Removal {
 }
 
 const pending = ref<Removal | null>(null);
+const inviting = ref<string | null>(null);
 const removing = ref(false);
 const removalError = ref("");
 
@@ -171,6 +173,7 @@ async function confirmRemoval() {
           :item="item"
           @forget="ask(item, 'forget')"
           @delete="ask(item, 'delete')"
+          @invite="inviting = item.id"
         />
       </ul>
     </section>
@@ -197,6 +200,8 @@ async function confirmRemoval() {
     @confirm="confirmRemoval"
     @cancel="pending = null"
   />
+
+  <InviteDialog v-if="inviting" :id="inviting" @close="inviting = null" />
 </template>
 
 <style scoped>

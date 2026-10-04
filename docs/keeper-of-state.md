@@ -87,3 +87,14 @@ Two things to tell the user, not just the agent. Last write wins, so a tool that
 will overwrite whatever the agent just wrote — the page must sit still while an agent has
 a live key. And nothing pushes changes back, so the page goes stale silently until it is
 reloaded.
+
+## Hand ownership to a person
+
+To let someone else edit, mint an invite rather than sending them your key. It redeems once,
+within 24 hours, for an owner key of their own. That makes it the one secret that does
+belong in a link: put it in the fragment, `#invite=<invite>`, which the browser never sends
+to a server, and have the page take it out of the address bar before anything else can copy
+it. `tools/itinerary/src/views/TripView.vue` does both.
+
+The key it becomes is a full owner key, so the person can delete the document for everyone,
+and nothing can revoke it. Say so wherever the link is made.

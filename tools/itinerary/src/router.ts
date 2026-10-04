@@ -47,5 +47,11 @@ export function tripUrl(id: string, editing: boolean): string {
   return `${location.origin}${BASE}${id}${editing ? "/edit" : ""}`;
 }
 
+/* The invite rides in the fragment, which the browser never sends, so it stays
+   out of server logs and Referer headers on the way to the page that redeems it. */
+export function inviteUrl(id: string, invite: string): string {
+  return `${tripUrl(id, false)}#invite=${invite}`;
+}
+
 /* Served from the mount root, and shown to an agent, so it has to be absolute. */
 export const LLM_DOC = new URL("llm.md", document.baseURI).href;

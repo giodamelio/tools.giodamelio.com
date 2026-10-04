@@ -5,7 +5,9 @@ import {
   createBlob,
   deleteBlob,
   mintAgentKey,
+  mintInvite,
   readBlob,
+  redeemInvite,
   writeBlob,
 } from "../src/lib/keeper";
 import { emptyDoc } from "../src/lib/doc";
@@ -33,6 +35,7 @@ describe("apiFailure", () => {
     ["forbidden", "this browser is not allowed to do that"],
     ["rate_limited", "the server is asking you to slow down, so wait a minute"],
     ["too_large", "this itinerary has grown too big to save"],
+    ["invite_used", "someone has already used this invite"],
   ];
 
   it.each(CODES)("says what %s means in plain words", async (code, prose) => {
@@ -135,5 +138,37 @@ describe("mintAgentKey", () => {
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/keeper-of-state/itinerary/3pwsf4hhwx5n6s/keys");
     expect(JSON.parse(init.body as string)).toEqual({ expires_in: 3600 });
+  });
+});
+
+describe("mintInvite", () => {
+  it("asks with the owner key and no body", async () => {
+    const fetch = stubFetch(respond(201, { invite: "inv-1", expires_at: "later" }));
+    const minted = await mintInvite("3pwsf4hhwx5n6s", "k-1");
+    expect(minted.invite).toBe("inv-1");
+
+    const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/keeper-of-state/itinerary/3pwsf4hhwx5n6s/invites");
+    expect(init.method).toBe("POST");
+    expect(init.headers).toEqual({ Authorization: "Bearer k-1" });
+    expect(init.body).toBeUndefined();
+  });
+});
+
+describe("redeemInvite", () => {
+  it("trades the invite for an owner key", async () => {
+    const fetch = stubFetch(respond(201, { edit_key: "k-2" }));
+    expect(await redeemInvite("3pwsf4hhwx5n6s", "inv-1")).toBe("k-2");
+
+    const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/keeper-of-state/itinerary/3pwsf4hhwx5n6s/invites/redeem");
+    expect(init.headers).toEqual({ Authorization: "Bearer inv-1" });
+  });
+
+  it("says plainly when someone got there first", async () => {
+    stubFetch(respond(409, { error: "invite_used" }));
+    await expect(redeemInvite("3pwsf4hhwx5n6s", "inv-1")).rejects.toThrow(
+      "someone has already used this invite",
+    );
   });
 });
