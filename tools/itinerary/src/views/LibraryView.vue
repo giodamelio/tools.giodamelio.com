@@ -4,8 +4,8 @@ import { useRouter } from "vue-router";
 import type { LibraryItem } from "../types";
 import { useLibraryStore } from "../stores/library";
 import { useSettingsStore } from "../stores/settings";
-import { createBlob, deleteBlob } from "../lib/keeper";
-import { DEMO_ID, emptyDoc, UNTITLED } from "../lib/doc";
+import { createBlob, deleteBlob, readBlob } from "../lib/keeper";
+import { DEMO_ID, emptyDoc, fromDoc, toDoc, UNTITLED } from "../lib/doc";
 import { tripPath } from "../router";
 import LibraryRow from "../components/LibraryRow.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -52,6 +52,20 @@ async function createItinerary() {
     creating.value = false;
     const why = err instanceof Error ? err.message : String(err);
     createError.value = `Could not create an itinerary — ${why}.`;
+  }
+}
+
+/* Reads the stored copy rather than the library row, which holds only a title. */
+async function duplicate(id: string) {
+  createError.value = "";
+  try {
+    const found = await readBlob(id);
+    if (!found) throw new Error("it was deleted");
+    const copyId = await library.duplicate(toDoc(fromDoc(found.doc)));
+    await router.push(tripPath(copyId, true));
+  } catch (err) {
+    const why = err instanceof Error ? err.message : String(err);
+    createError.value = `Could not duplicate it — ${why}.`;
   }
 }
 
@@ -174,6 +188,7 @@ async function confirmRemoval() {
           @forget="ask(item, 'forget')"
           @delete="ask(item, 'delete')"
           @invite="inviting = item.id"
+          @duplicate="duplicate(item.id)"
         />
       </ul>
     </section>
@@ -186,6 +201,7 @@ async function confirmRemoval() {
           :key="item.id"
           :item="item"
           @forget="ask(item, 'forget')"
+          @duplicate="duplicate(item.id)"
         />
       </ul>
     </section>

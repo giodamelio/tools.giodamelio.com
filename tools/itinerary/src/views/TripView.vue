@@ -8,6 +8,8 @@ import { localZone, todayIso } from "../lib/time";
 import { calendarMonths, entryView, groupDays, spanLabel } from "../lib/present";
 import { shareLink } from "../lib/share";
 import { useTripStore } from "../stores/trip";
+import { useLibraryStore } from "../stores/library";
+import { tripPath } from "../router";
 import { useSettingsStore } from "../stores/settings";
 import { usePrintPageSize } from "../composables/usePrintPageSize";
 import TripToolbar from "../components/TripToolbar.vue";
@@ -22,6 +24,7 @@ import SmartAddDialog from "../components/SmartAddDialog.vue";
 const route = useRoute();
 const router = useRouter();
 const trip = useTripStore();
+const library = useLibraryStore();
 const settings = useSettingsStore();
 
 usePrintPageSize(computed(() => settings.view));
@@ -45,6 +48,8 @@ const draft = ref<Entry | null>(null);
 const settingsOpen = ref(false);
 const handoffOpen = ref(false);
 const inviteOpen = ref(false);
+const duplicating = ref(false);
+const duplicateError = ref("");
 const smartOpen = ref(false);
 const smartHintOpen = ref(false);
 const copied = ref(false);
@@ -114,6 +119,22 @@ function openSettingsFromHint() {
 function doPrint() {
   window.print();
 }
+
+/* Copies what is on screen, so an owner's unsaved edits come along too. */
+async function duplicate() {
+  if (duplicating.value) return;
+  duplicating.value = true;
+  duplicateError.value = "";
+  try {
+    const id = await library.duplicate(trip.doc);
+    await router.push(tripPath(id, true));
+  } catch (err) {
+    const why = err instanceof Error ? err.message : String(err);
+    duplicateError.value = `Could not duplicate it — ${why}.`;
+  } finally {
+    duplicating.value = false;
+  }
+}
 </script>
 
 <template>
@@ -148,6 +169,9 @@ function doPrint() {
         <div class="no-print hdr-actions">
           <button class="btn" @click="copyLink">{{ copied ? "Link copied" : "Share" }}</button>
           <button class="btn" @click="doPrint">Print</button>
+          <button v-if="!trip.loadError" class="btn" @click="duplicate">
+            {{ duplicating ? "Duplicating…" : "Duplicate" }}
+          </button>
           <!-- Fixed width: "Done" is bold and wider than "Edit", and this row is
                right-aligned, so a size change would slide Share and Print. -->
           <button
@@ -310,6 +334,7 @@ function doPrint() {
       <div v-else-if="trip.inviteError" class="no-print error-box spaced">
         {{ trip.inviteError }}
       </div>
+      <div v-if="duplicateError" class="no-print error-box spaced">{{ duplicateError }}</div>
 
       <TripToolbar
         v-if="!trip.loadError"

@@ -8,7 +8,7 @@ import { shareLink } from "../lib/share";
 import InfoTip from "./InfoTip.vue";
 
 const props = defineProps<{ item: LibraryItem }>();
-const emit = defineEmits<{ forget: []; delete: []; invite: [] }>();
+const emit = defineEmits<{ forget: []; delete: []; invite: []; duplicate: [] }>();
 
 const menuOpen = ref(false);
 const shared = ref(false);
@@ -29,11 +29,12 @@ async function share() {
   setTimeout(() => (shared.value = false), 1800);
 }
 
-function choose(what: "forget" | "delete" | "invite") {
+function choose(what: "forget" | "delete" | "invite" | "duplicate") {
   menuOpen.value = false;
   if (what === "forget") emit("forget");
   else if (what === "delete") emit("delete");
-  else emit("invite");
+  else if (what === "invite") emit("invite");
+  else emit("duplicate");
 }
 </script>
 
@@ -77,6 +78,7 @@ function choose(what: "forget" | "delete" | "invite") {
           <button v-if="owned" class="menu-item" @click="choose('invite')">
             Invite Editor
           </button>
+          <button class="menu-item" @click="choose('duplicate')">Duplicate</button>
 
           <span class="menu-rule" />
 

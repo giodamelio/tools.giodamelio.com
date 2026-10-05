@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
-import type { Library, LibraryItem } from "../types";
-import { readBlob } from "../lib/keeper";
+import type { Library, LibraryItem, TripDoc } from "../types";
+import { createBlob, readBlob } from "../lib/keeper";
+import { UNTITLED } from "../lib/doc";
 import { readJson, writeJson } from "../lib/storage";
 
 const LIBRARY_STORE = "itin-library";
@@ -70,6 +71,20 @@ export const useLibraryStore = defineStore("library", () => {
     remember(id, { role: "viewer", title, modified, viewed: new Date().toISOString() });
   }
 
+  /* The copy is a new itinerary this browser owns; the original is only read. */
+  async function duplicate(doc: TripDoc): Promise<string> {
+    const copy = { ...doc, title: `Copy of ${doc.title || UNTITLED}` };
+    const created = await createBlob(copy);
+    remember(created.id, {
+      role: "owner",
+      key: created.edit_key,
+      title: copy.title,
+      created: created.created_at,
+      modified: created.created_at,
+    });
+    return created.id;
+  }
+
   function forget(id: string): void {
     const library = readLibrary();
     library.items = library.items.filter((it) => it.id !== id);
@@ -126,6 +141,7 @@ export const useLibraryStore = defineStore("library", () => {
     keyFor,
     remember,
     noteViewed,
+    duplicate,
     forget,
     refresh,
   };
