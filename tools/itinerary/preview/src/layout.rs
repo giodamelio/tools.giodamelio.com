@@ -30,9 +30,18 @@ const ICON_SPACE: f32 = 10.0;
 /// How far the icons' baseline sits below the route's, to centre them on the stop names.
 const ICON_DROP: f32 = 6.0;
 
-const TITLE_LEADING: f32 = 82.0;
-const LINE_GAP: f32 = 90.0;
-const PEOPLE_GAP: f32 = 110.0;
+/// Where the lines above the link sit. A two-line title needs more height, which comes out of the gaps
+/// between lines rather than the space above the title.
+struct Spacing {
+    title_baseline: f32,
+    title_leading: f32,
+    line_gap: f32,
+    people_gap: f32,
+}
+
+const ONE_LINE_TITLE: Spacing = Spacing { title_baseline: 200.0, title_leading: 0.0, line_gap: 90.0, people_gap: 110.0 };
+const TWO_LINE_TITLE: Spacing = Spacing { title_baseline: 168.0, title_leading: 78.0, line_gap: 82.0, people_gap: 100.0 };
+
 const LINK_BASELINE: f32 = 580.0;
 
 const ELLIPSIS: &str = "…";
@@ -57,23 +66,24 @@ pub fn lines(summary: &Summary) -> Vec<Line> {
     };
 
     let title = title(&summary.title);
-    // A wrapped title starts higher and pushes the rest down; the link stays at the bottom.
-    let first_baseline = if title.len() == 1 { 200.0 } else { 140.0 };
-    let last_title = first_baseline + TITLE_LEADING * (title.len() - 1) as f32;
+    let spacing = if title.len() == 1 { ONE_LINE_TITLE } else { TWO_LINE_TITLE };
+    let title_baseline = |i: usize| spacing.title_baseline + spacing.title_leading * i as f32;
+    let last_title = title_baseline(title.len() - 1);
     let mut lines: Vec<Line> = title
         .into_iter()
         .enumerate()
-        .map(|(i, text)| line(TITLE, first_baseline + TITLE_LEADING * i as f32, FOREGROUND, text))
+        .map(|(i, text)| line(TITLE, title_baseline(i), FOREGROUND, text))
         .collect();
 
     if let Some(dates) = &summary.dates {
-        lines.push(line(DATES, last_title + LINE_GAP, MUTED, truncate(DATES, dates)));
+        lines.push(line(DATES, last_title + spacing.line_gap, MUTED, truncate(DATES, dates)));
     }
+    let route_baseline = last_title + 2.0 * spacing.line_gap;
     if !summary.route.stops.is_empty() {
-        lines.extend(route_line(&summary.route, last_title + 2.0 * LINE_GAP));
+        lines.extend(route_line(&summary.route, route_baseline));
     }
     if !summary.people.is_empty() {
-        lines.push(line(PEOPLE, last_title + 2.0 * LINE_GAP + PEOPLE_GAP, FOREGROUND, people(&summary.people)));
+        lines.push(line(PEOPLE, route_baseline + spacing.people_gap, FOREGROUND, people(&summary.people)));
     }
     lines.push(Line {
         x: MARGIN + CONTENT_WIDTH,
@@ -426,7 +436,7 @@ mod tests {
     }
 
     #[test]
-    fn layout_moves_down_when_the_title_wraps() {
+    fn a_wrapped_title_tightens_the_lines_below_it() {
         let summary = Summary {
             title: "A title long enough that it cannot possibly fit on a single line of the card".to_string(),
             dates: Some("Jul 11 – 18, 2026 · 8 days".to_string()),
@@ -435,6 +445,6 @@ mod tests {
             link: "tools.giodamelio.com/itinerary/3pwsf4hhwx5n6s".to_string(),
         };
         let baselines: Vec<f32> = lines(&summary).iter().map(|line| line.baseline).collect();
-        assert_eq!(baselines, [140.0, 222.0, 312.0, 402.0, 402.0 + ICON_DROP, 402.0, 512.0, 580.0]);
+        assert_eq!(baselines, [168.0, 246.0, 328.0, 410.0, 410.0 + ICON_DROP, 410.0, 510.0, 580.0]);
     }
 }
