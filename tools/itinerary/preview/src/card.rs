@@ -1,7 +1,8 @@
 use tiny_skia::{Color, Paint, Pixmap, Rect, Transform};
 
 use crate::glyphs::{Rgb, SUBPIXEL_STEPS};
-use crate::layout::{self, ACCENT, ACCENT_BAR_WIDTH, BACKGROUND, HEIGHT, STYLES, WIDTH};
+use crate::layout::{self, ACCENT, ACCENT_BAR_WIDTH, BACKGROUND, HEIGHT, ICON, STYLES, WIDTH};
+use crate::route::{Mode, Route};
 use crate::shape::{self, Line};
 use crate::summary::{alphabetical, Summary};
 
@@ -38,22 +39,24 @@ fn encode(pixmap: &Pixmap) -> Vec<u8> {
     png
 }
 
-/// Rasterises printable ASCII in every style at every subpixel offset, then renders an ordinary and a
-/// worst-case card. Run during isolate startup, it keeps lazy wasm compilation and glyph rasterising out of
+/// Rasterises printable ASCII in every style and every transport icon, at every subpixel offset, then
+/// renders the sample cards. Run during isolate startup, it keeps lazy wasm compilation and glyph rasterising out of
 /// the first request, which otherwise costs 60–130 ms of CPU.
 pub fn warm() {
     let ascii: String = (' '..='~').collect();
+    let icons: String = Mode::ALL.iter().map(|mode| mode.icon()).collect();
+    let styles = STYLES.iter().map(|&style| (style, &ascii)).chain([(ICON, &icons)]);
     let mut scratch = Pixmap::new(WIDTH, HEIGHT).expect("card size is non-zero");
-    for (weight, size) in STYLES {
+    for ((font, size), text) in styles {
         for step in 0..SUBPIXEL_STEPS {
             let line = Line {
-                weight,
+                font,
                 size,
                 x: step as f32 / SUBPIXEL_STEPS as f32,
                 baseline: size,
                 align_end: false,
                 color: Rgb(0xff, 0xff, 0xff),
-                text: ascii.clone(),
+                text: text.clone(),
             };
             shape::draw(&line, &mut scratch);
         }
@@ -64,13 +67,13 @@ pub fn warm() {
 }
 
 /// Trips that exercise every layout rule. The warm-up renders all of them; `examples/cards.rs` writes them to
-/// disk to look at.
+/// disk to look at. Legs are `[type, from, to, operator]`, and become a route the same way a stored trip's do.
 pub fn samples() -> Vec<(&'static str, Summary)> {
     let strings = |list: &[&str]| list.iter().map(|s| s.to_string()).collect::<Vec<String>>();
-    let summary = |title: &str, dates: Option<&str>, stops: &[&str], people: &[&str], id: &str| Summary {
+    let summary = |title: &str, dates: Option<&str>, legs: &[[&str; 4]], people: &[&str], id: &str| Summary {
         title: title.to_string(),
         dates: dates.map(str::to_string),
-        stops: strings(stops),
+        route: Route::from_legs(Some(&serde_json::to_string(legs).expect("legs serialise"))),
         people: alphabetical(strings(people)),
         link: format!("tools.giodamelio.com/itinerary/{id}"),
     };
@@ -80,7 +83,13 @@ pub fn samples() -> Vec<(&'static str, Summary)> {
             summary(
                 "Puerto Rico, July",
                 Some("Jul 11 – 18, 2026 · 8 days"),
-                &["Chicago O'Hare", "San Juan", "Old San Juan", "Ceiba ferry terminal", "Ceiba", "Vieques", "Ceiba", "San Juan", "Chicago O'Hare"],
+                &[
+                    ["flight", "Chicago O'Hare", "San Juan", "United"],
+                    ["drive", "Old San Juan", "Ceiba ferry terminal", ""],
+                    ["transit", "Ceiba", "Vieques", "Puerto Rico Ferry"],
+                    ["transit", "Vieques", "Ceiba", "Puerto Rico Ferry"],
+                    ["flight", "San Juan", "Chicago O'Hare", "United"],
+                ],
                 &["Alex", "Sam"],
                 "3pwsf4hhwx5n6s",
             ),
@@ -91,8 +100,19 @@ pub fn samples() -> Vec<(&'static str, Summary)> {
                 "Grandma Rosalind's 80th Birthday Extravaganza Across the Entire Iberian Peninsula and Back Again",
                 Some("Oct 28 – Nov 14, 2026 · 18 days"),
                 &[
-                    "San Francisco", "New York JFK", "Lisbon", "Porto", "Coimbra", "Sintra", "Évora", "Faro", "Seville",
-                    "Granada", "Madrid", "Barcelona", "New York JFK", "San Francisco",
+                    ["flight", "SFO", "JFK", "United"],
+                    ["flight", "JFK", "LIS", "TAP Air Portugal"],
+                    ["transit", "Lisbon Santa Apolónia", "Porto Campanhã", "CP Alfa Pendular"],
+                    ["transit", "Porto", "Coimbra", "Rede Expressos bus"],
+                    ["drive", "Coimbra", "Sintra", ""],
+                    ["drive", "Sintra", "Évora", ""],
+                    ["transit", "Évora", "Faro", "FlixBus"],
+                    ["transit", "Faro", "Seville", "Alsa bus"],
+                    ["transit", "Seville", "Granada", "Renfe"],
+                    ["transit", "Granada", "Madrid", "Renfe AVE"],
+                    ["flight", "MAD", "BCN", "Iberia"],
+                    ["flight", "BCN", "JFK", "Delta"],
+                    ["flight", "JFK", "SFO", "United"],
                 ],
                 &[
                     "Alexandra", "Bartholomew", "Christopher", "Giovanni", "Josephine", "Maximilian", "Penelope",
@@ -103,18 +123,36 @@ pub fn samples() -> Vec<(&'static str, Summary)> {
         ),
         (
             "short-route",
-            summary("Weekend in Portland", Some("Mar 6 – 8, 2027 · 3 days"), &["SEA", "PDX", "SEA"], &["Gio"], "b2c3d4f5g6h7j8"),
+            summary(
+                "Weekend in Portland",
+                Some("Mar 6 – 8, 2027 · 3 days"),
+                &[["transit", "Seattle King Street", "Portland Union Station", "Amtrak Cascades"], ["flight", "PDX", "SEA", "Alaska"]],
+                &["Gio"],
+                "b2c3d4f5g6h7j8",
+            ),
         ),
         (
             "single-day",
-            summary("Ferry to Victoria", Some("Aug 2, 2026 · 1 day"), &["Seattle"], &["Gio", "Sam"], "m9n8p7q6r5s4t3"),
+            summary(
+                "Ferry to Victoria",
+                Some("Aug 2, 2026 · 1 day"),
+                &[["transit", "Seattle", "Victoria", "Clipper ferry"]],
+                &["Gio", "Sam"],
+                "m9n8p7q6r5s4t3",
+            ),
         ),
         (
             "new-year",
             summary(
                 "New Year in Reykjavík",
                 Some("Dec 29, 2026 – Jan 3, 2027 · 6 days"),
-                &["Boston Logan", "Keflavík", "Reykjavík", "Keflavík", "Boston Logan"],
+                &[
+                    ["flight", "BOS", "KEF", "Icelandair"],
+                    ["transit", "Keflavík Airport", "Reykjavík BSÍ", "Flybus"],
+                    ["drive", "Reykjavík", "Vík", ""],
+                    ["drive", "Vík", "Reykjavík", ""],
+                    ["flight", "KEF", "BOS", "Icelandair"],
+                ],
                 &["Ægir", "Zoë", "Ólafur", "chloé"],
                 "v2w3x4z5b6c7d8",
             ),

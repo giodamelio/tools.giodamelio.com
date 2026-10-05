@@ -1,12 +1,13 @@
 use serde_json::Value;
 
+use crate::route::Route;
 use crate::store::TripRow;
 
 /// Everything the card and the page's tags say about a trip, before anything is fitted to a width.
 pub struct Summary {
     pub title: String,
     pub dates: Option<String>,
-    pub stops: Vec<String>,
+    pub route: Route,
     /// In the order `alphabetical` gives.
     pub people: Vec<String>,
     /// The trip's URL without its scheme, as printed on the card.
@@ -24,7 +25,7 @@ impl Summary {
                 (Some(first), Some(last)) => date_range(first, last),
                 _ => None,
             },
-            stops: stops(row.legs.as_deref()),
+            route: Route::from_legs(row.legs.as_deref()),
             people: alphabetical(strings(row.roster.as_deref())),
             link,
         }
@@ -103,23 +104,6 @@ fn strings(json: Option<&str>) -> Vec<String> {
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .collect()
-}
-
-/// The first leg's origin, then every destination, with a stop that repeats the one before it dropped.
-fn stops(legs_json: Option<&str>) -> Vec<String> {
-    let Some(Value::Array(legs)) = legs_json.and_then(|j| serde_json::from_str(j).ok()) else {
-        return Vec::new();
-    };
-    let mut stops: Vec<String> = Vec::new();
-    for leg in &legs {
-        let Value::Array(ends) = leg else { continue };
-        for place in ends.iter().filter_map(Value::as_str).map(str::trim).filter(|p| !p.is_empty()) {
-            if stops.last().map(String::as_str) != Some(place) {
-                stops.push(place.to_string());
-            }
-        }
-    }
-    stops
 }
 
 /// `Alex`, `Alex and Sam`, `Alex, Gio and Sam`, or with `others` more: `Alex, Gio and 3 others`.
@@ -228,19 +212,6 @@ mod tests {
     }
 
     #[test]
-    fn stops_follow_every_kind_of_leg_and_drop_repeats() {
-        let legs = r#"[["Chicago O'Hare","San Juan"],["San Juan","Ceiba"],["Ceiba","Vieques"],[null,"Ceiba"],["Ceiba","San Juan"]]"#;
-        assert_eq!(stops(Some(legs)), ["Chicago O'Hare", "San Juan", "Ceiba", "Vieques", "Ceiba", "San Juan"]);
-    }
-
-    #[test]
-    fn stops_ignore_malformed_legs() {
-        assert!(stops(Some(r#"{"not":"an array"}"#)).is_empty());
-        assert_eq!(stops(Some(r#"[["A","B"],"junk",[1,"C"]]"#)), ["A", "B", "C"]);
-        assert!(stops(None).is_empty());
-    }
-
-    #[test]
     fn people_are_sorted_ignoring_case() {
         let summary = Summary::from_row(&row(Some("T"), Some(r#"["sam","Alex","Gio",""]"#), None, None), String::new());
         assert_eq!(summary.people, ["Alex", "Gio", "sam"]);
@@ -267,7 +238,7 @@ mod tests {
         let summary = Summary::from_row(&row(Some("  "), Some("[]"), None, Some("[]")), "x".to_string());
         assert_eq!(summary.title, "Untitled trip");
         assert_eq!(summary.dates, None);
-        assert!(summary.stops.is_empty() && summary.people.is_empty());
+        assert!(summary.route.stops.is_empty() && summary.people.is_empty());
         assert_eq!(summary.description(), None);
     }
 

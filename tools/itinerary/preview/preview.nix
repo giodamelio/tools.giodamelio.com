@@ -12,6 +12,7 @@
   esbuild,
   python3Packages,
   inter,
+  material-symbols,
 }:
 # The itinerary's link preview Worker. It is not a tool, so it lives in preview.nix rather than package.nix,
 # where nix/packages.nix would discover it as one; package.nix exposes it through passthru.tool.preview.
@@ -28,6 +29,16 @@ let
         --layout-features="kern,liga,calt" \
         --output-file=$out/Inter-''${spec##*:}.ttf
     done
+
+    # The route's transport icons, filled and at the route's weight: directions_bus, directions_car,
+    # directions_boat, flight and train.
+    fonttools varLib.instancer -q \
+      "${material-symbols}/share/fonts/truetype/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf" \
+      FILL=1 GRAD=0 opsz=40 wght=600 -o instance.ttf
+    pyftsubset instance.ttf \
+      --unicodes="U+E530-E532,U+E539,U+E570" \
+      --layout-features="" \
+      --output-file=$out/Icons.ttf
   '';
 in
   stdenv.mkDerivation {

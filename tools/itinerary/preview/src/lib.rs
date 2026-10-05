@@ -3,9 +3,11 @@
 //! The main worker reaches this one only through its `ITINERARY_PREVIEW` service binding, with two requests:
 //! `GET /meta?url=<trip page URL>` for the tags, and the card URL itself, forwarded as the visitor sent it.
 
+mod airport_data;
 mod card;
 mod glyphs;
 mod layout;
+mod route;
 mod shape;
 mod store;
 mod summary;

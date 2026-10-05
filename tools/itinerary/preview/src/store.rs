@@ -15,8 +15,8 @@ pub struct TripRow {
     pub first_day: Option<String>,
     /// `YYYY-MM-DD`, from the latest entry end, or start where an entry has no end.
     pub last_day: Option<String>,
-    /// JSON text, an array of `[from, to]` for every flight, transit and drive, ordered by start. Only the
-    /// card query selects it.
+    /// JSON text, an array of `[type, from, to, operator, service]` for every flight, transit and drive,
+    /// ordered by start. Only the card query selects it.
     #[serde(default)]
     pub legs: Option<String>,
     pub updated_at: String,
@@ -57,7 +57,8 @@ const META: &str = trip_query!();
 /// For the card, only on a cache miss: a second scan collects the legs. `json_group_array` keeps the
 /// subquery's order.
 const CARD: &str = trip_query!(
-    "(SELECT json_group_array(json_array(leg.value ->> 'from', leg.value ->> 'to')) \
+    "(SELECT json_group_array(json_array(leg.value ->> 'type', leg.value ->> 'from', leg.value ->> 'to', \
+                                         leg.value ->> 'operator', leg.value ->> 'service')) \
      FROM (SELECT value FROM json_each(b.data, '$.entries') \
            WHERE value ->> 'type' IN ('flight', 'transit', 'drive') \
            ORDER BY value ->> 'start') AS leg) AS legs, "
