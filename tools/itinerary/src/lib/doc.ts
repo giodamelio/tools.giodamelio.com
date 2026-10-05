@@ -2,6 +2,7 @@ import { ENTRY_TYPES, EVERYONE } from "../types";
 import type { Entry, EntryText, EntryType, TripDoc, TripState } from "../types";
 import { toWall } from "./time";
 import { repairedEntryId } from "./id";
+import demoTrip from "../demo-trip.json";
 
 export const PALETTE_SIZE = 6;
 
@@ -9,7 +10,8 @@ const TEXT_KEYS: readonly EntryText[] = ["from", "to", "operator", "service", "n
 
 export const UNTITLED = "Untitled trip";
 
-export const DEMO_ID = "3pwsf4hhwx5n6s";
+/* Shared with scripts/seed-demo-trip.js, which seeds this id into a local D1. */
+export const DEMO_ID = demoTrip.id;
 
 export function emptyDoc(): TripDoc {
   return { title: UNTITLED, roster: [], colors: {}, tzMode: "local", entries: [] };

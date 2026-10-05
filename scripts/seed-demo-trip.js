@@ -3,11 +3,11 @@
 // `nix run .#keeper-seed`.
 //
 // Production already holds this document under this id, so the library links to it
-// unconditionally; a local D1 starts empty and the link 404s until this runs. The
-// id is the DEMO_ID in tools/itinerary/src/lib/doc.ts — change one and
-// change the other.
+// unconditionally; a local D1 starts empty and the link 404s until this runs.
 
-const ID = "3pwsf4hhwx5n6s";
+import demoTrip from "../tools/itinerary/src/demo-trip.json" with { type: "json" };
+
+const ID = demoTrip.id;
 
 const DEMO = {
   "title": "Puerto Rico, July",
