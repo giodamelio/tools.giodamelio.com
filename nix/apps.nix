@@ -7,6 +7,9 @@
   }: let
     accountId = "dd00af6bb2aa48a10ddf29a3a20cf429";
 
+    # giodamelio.com, the zone tools.giodamelio.com is served from.
+    zoneId = "0e91800ab04abae0cef614304e109ae2";
+
     # Wrangler resolves `main` against its config, so it runs in worker/, where
     # the config, the entry point and the migrations already are and where
     # .wrangler/ can be written. Run these from the project root.
@@ -186,6 +189,45 @@
       zones = {
         text = ''exec node "$PWD/scripts/build-zone-data.js"'';
         inputs = [pkgs.nodejs];
+      };
+
+      # Purges Cloudflare's cache, which holds what the main worker put in the
+      # Cache API. Needs CF_API_TOKEN, a token with Zone > Cache Purge on the
+      # zone; wrangler's own login cannot be granted that scope. Purging
+      # everything clears every site on giodamelio.com, so it has to be asked
+      # for by name.
+      cache-purge = {
+        text = ''
+          usage() {
+            echo "usage: cache-purge <url>...      purge these URLs, exactly as cached" >&2
+            echo "       cache-purge --everything  purge the whole giodamelio.com zone" >&2
+            exit 2
+          }
+          [[ $# -gt 0 ]] || usage
+          : "''${CF_API_TOKEN:?set CF_API_TOKEN to a token with Zone > Cache Purge}"
+
+          if [[ $1 == --everything ]]; then
+            [[ $# -eq 1 ]] || usage
+            body='{"purge_everything": true}'
+          else
+            [[ $1 != -* ]] || usage
+            body=$(jq -n '{files: $ARGS.positional}' --args "$@")
+          fi
+
+          response=$(curl -sS -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$body")
+
+          if [[ $(jq -r '.success' <<<"$response") != true ]]; then
+            echo "Cloudflare refused the purge:" >&2
+            jq '.errors' <<<"$response" >&2
+            exit 1
+          fi
+          echo "Purged."
+        '';
+        inputs = [pkgs.curl pkgs.jq];
       };
 
       # Impure the same way: it fetches OurAirports and writes the itinerary

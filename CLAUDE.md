@@ -85,6 +85,7 @@ HTML through `html`.
 | `nix run .#keeper-seed` | writes the itinerary's demo trip into the local D1 |
 | `nix run .#keeper-stats` / `-remote` | prints itinerary and key counts from D1 |
 | `nix run .#keeper-test` | runs the Hurl suite against `KEEPER_BASE`, default localhost:8788 |
+| `nix run .#cache-purge -- <url>...` / `--everything` | purges Cloudflare's cache for those URLs or the whole zone; needs `CF_API_TOKEN` with Zone > Cache Purge |
 | `nix run .#preview-test` | runs each preview Worker's Hurl suite against `PREVIEW_BASE`, after `keeper-seed` |
 | `nix run .#zones` | refreshes `tools/itinerary/src/lib/zone-data.ts` from tzdb |
 | `nix run .#airports` | refreshes `tools/itinerary/preview/src/airport_data.rs` from OurAirports |
