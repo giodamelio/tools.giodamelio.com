@@ -1,0 +1,17 @@
+# The built Worker is not checked in: the scripts in nix/apps.nix link the preview derivation in as build/,
+# the same way they link worker/tool-routes.js.
+name = "tools-itinerary-preview"
+main = "build/index.js"
+compatibility_date = "2026-05-14"
+
+# Reachable only through the main worker's ITINERARY_PREVIEW service binding, never from the internet.
+workers_dev = false
+preview_urls = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "keeper-of-state"
+database_id = "d5a4697d-213a-4f77-a305-cb72fa3700ba"
+
+[observability]
+enabled = true

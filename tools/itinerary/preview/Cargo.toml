@@ -1,0 +1,40 @@
+[package]
+name = "itinerary-preview"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+# rlib as well, so examples/cards.rs can render cards natively.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Both pinned to what nixpkgs builds with: worker-build 0.8.5 checks the worker crate against its own version,
+# and wasm-bindgen must match wasm-bindgen-cli_0_2_126 exactly.
+worker = { version = "=0.8.5", features = ["d1"] }
+wasm-bindgen = "=0.2.126"
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd"] }
+harfrust = "0.12"
+skrifa = "0.44"
+png = "0.18"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Measured on Workers: opt-level 3 with LTO is the fastest build, and the bundle stays well under the
+# free plan's 3 MB. Do not add `strip`: it removes the target_features section wasm-bindgen reads, and the
+# build fails with "externref table required".
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+  "-O3",
+  "--enable-simd",
+  "--enable-bulk-memory",
+  "--enable-nontrapping-float-to-int",
+  "--enable-sign-ext",
+  "--enable-reference-types",
+  "--enable-multivalue",
+]
