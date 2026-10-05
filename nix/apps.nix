@@ -25,6 +25,41 @@
     # naming it here is what keeps every run serving what the sources say now.
     site = "--assets ${config.packages.site}";
 
+    # One statement, so wrangler prints one table. D1 caps the terms in a
+    # compound SELECT, which a VALUES list is exempt from. Only columns from the
+    # first migration, so it also reads a database that is behind on migrations.
+    statsSql = ''
+      WITH live AS (SELECT * FROM blobs WHERE app = 'itinerary' AND deleted_at IS NULL)
+      SELECT column1 AS metric, column2 AS value FROM (VALUES
+        ('itineraries', (SELECT COUNT(*) FROM live)),
+        ('itineraries deleted',
+          (SELECT COUNT(*) FROM blobs WHERE app = 'itinerary' AND deleted_at IS NOT NULL)),
+        ('created in the last 7 days',
+          (SELECT COUNT(*) FROM blobs WHERE app = 'itinerary'
+             AND created_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-7 days'))),
+        ('edited in the last 7 days',
+          (SELECT COUNT(*) FROM live
+             WHERE updated_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-7 days'))),
+        ('average size (bytes)', (SELECT CAST(AVG(LENGTH(data)) AS INTEGER) FROM live)),
+        ('largest (bytes)', (SELECT MAX(LENGTH(data)) FROM live)),
+        ('blobs in other apps',
+          (SELECT COUNT(*) FROM blobs WHERE app != 'itinerary' AND deleted_at IS NULL)),
+        ('owner keys', (SELECT COUNT(*) FROM keys WHERE kind = 'owner')),
+        ('temporary keys still live',
+          (SELECT COUNT(*) FROM keys WHERE kind = 'temporary' AND revoked_at IS NULL
+             AND expires_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))),
+        ('invites minted', (SELECT COUNT(*) FROM keys WHERE kind = 'invite'))
+      );
+    '';
+    # With --json, wrangler reports a failure as an object on stdout rather than
+    # the usual array, so pass that through whole instead of formatting it.
+    statsFormat = ''
+      if type == "array"
+      then .[0].results[] | "\(.metric | . + (" " * (30 - length)))\(.value // "-")"
+      else "wrangler failed:\n\(.)\n" | halt_error(1)
+      end
+    '';
+
     scripts = {
       deploy = {
         text = ''
@@ -64,6 +99,23 @@
           exec wrangler d1 migrations apply keeper-of-state --remote
         '';
         inputs = [pkgs.wrangler];
+      };
+
+      keeper-stats = {
+        text = ''
+          ${inWorker}
+          wrangler d1 execute keeper-of-state --local --json --command ${lib.escapeShellArg statsSql} \
+            | jq -r ${lib.escapeShellArg statsFormat}
+        '';
+        inputs = [pkgs.wrangler pkgs.jq];
+      };
+      keeper-stats-remote = {
+        text = ''
+          ${inWorker}
+          wrangler d1 execute keeper-of-state --remote --json --command ${lib.escapeShellArg statsSql} \
+            | jq -r ${lib.escapeShellArg statsFormat}
+        '';
+        inputs = [pkgs.wrangler pkgs.jq];
       };
 
       # Local only: the demo trip the library links to exists in production, so

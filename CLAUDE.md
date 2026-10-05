@@ -64,6 +64,7 @@ HTML through `html`.
 | `nix run .#deploy-preview` | uploads a preview version; set `PREVIEW_ALIAS` to name it |
 | `nix run .#keeper-migrate` / `-remote` | applies D1 migrations |
 | `nix run .#keeper-seed` | writes the itinerary's demo trip into the local D1 |
+| `nix run .#keeper-stats` / `-remote` | prints itinerary and key counts from D1 |
 | `nix run .#keeper-test` | runs the Hurl suite against `KEEPER_BASE`, default localhost:8788 |
 | `nix run .#zones` | refreshes `tools/itinerary/src/lib/zone-data.ts` from tzdb |
 
