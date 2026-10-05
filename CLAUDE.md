@@ -87,6 +87,7 @@ HTML through `html`.
 | `nix run .#keeper-test` | runs the Hurl suite against `KEEPER_BASE`, default localhost:8788 |
 | `nix run .#preview-test` | runs each preview Worker's Hurl suite against `PREVIEW_BASE`, after `keeper-seed` |
 | `nix run .#zones` | refreshes `tools/itinerary/src/lib/zone-data.ts` from tzdb |
+| `nix run .#airports` | refreshes `tools/itinerary/preview/src/airport_data.rs` from OurAirports |
 
 They are on `PATH` by bare name inside `nix develop`, and they expect to be run from the project root.
 

@@ -187,6 +187,13 @@
         text = ''exec node "$PWD/scripts/build-zone-data.js"'';
         inputs = [pkgs.nodejs];
       };
+
+      # Impure the same way: it fetches OurAirports and writes the itinerary
+      # preview's airport-to-city table back into the working tree.
+      airports = {
+        text = ''exec node "$PWD/scripts/build-airport-data.js"'';
+        inputs = [pkgs.nodejs];
+      };
     };
   in {
     _module.args.scriptNames = lib.attrNames scripts;
