@@ -34,6 +34,13 @@
 			"fallthrough": true
 		}
 	],
+	// One per tool with a preview Worker, named as its passthru.tool.preview.binding and its wrangler.toml.
+	"services": [
+		{
+			"binding": "ITINERARY_PREVIEW",
+			"service": "tools-itinerary-preview"
+		}
+	],
 	"ratelimits": [
 		{
 			"name": "KEEPER_CREATE",

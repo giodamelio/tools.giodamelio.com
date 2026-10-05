@@ -36,6 +36,25 @@ with Vite therefore sets `base: './'`, and rewrites `@basePath@` to `/` for the 
 mounted. `nix/worker.nix` prefixes them and generates `tool-routes.js`; the worker itself knows nothing
 about any particular tool.
 
+## Give a tool a link preview Worker
+
+A tool whose pages should unfurl in messengers attaches `passthru.tool.preview = { binding; card; dir;
+worker; }`. `worker` is a second Worker the tool builds itself, in `preview.nix` rather than a
+`package.nix` so discovery never takes it for a tool. `dir` holds its `wrangler.toml`. `card` is one more
+route pattern, relative to the mount like `routes`.
+
+The main worker reaches it only through the service binding named `binding`, which `wrangler.jsonc`
+declares. For every page route, the main worker asks it for `/meta?url=<page URL>` and appends the tags
+it returns to `<head>`. A 404 leaves the page untouched; any other failure fails the page with a 502. A
+request matching `card` is forwarded to it as sent, and a response it marks `immutable` is kept in the
+Cache API.
+
+`tools/itinerary/preview/` is the one there is: Rust, rendering a 1200×630 PNG with tiny-skia and
+HarfRust inside the free plan's 10 ms of CPU. Its D1 queries read the trip document's fields inside
+SQLite, so they change whenever `TripDoc` in `tools/itinerary/src/types.ts` does. Run `cargo test` or
+`cargo run --release --example cards` from its directory inside `nix develop`; the example writes every
+sample card to `cards/`, which is ignored.
+
 ## Put the rest in the right directory
 
 `worker/` holds the backend Worker, one directory per API, alongside whatever that API serves — its

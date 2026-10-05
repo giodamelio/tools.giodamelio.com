@@ -1,7 +1,9 @@
 {
+  lib,
   stdenvNoCC,
   importNpmLock,
   nodejs,
+  callPackage,
   basePath,
   ...
 }:
@@ -14,7 +16,11 @@ stdenvNoCC.mkDerivation {
   pname = "tool-itinerary";
   version = "2";
 
-  src = ./.;
+  # The preview Worker builds separately, so its Rust sources stay out of this derivation.
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.difference ./. ./preview;
+  };
 
   nativeBuildInputs = [nodejs importNpmLock.npmConfigHook];
   npmDeps = importNpmLock {npmRoot = ./.;};
@@ -51,5 +57,14 @@ stdenvNoCC.mkDerivation {
     # Trip permalinks, relative to wherever this tool is mounted. src/router.ts
     # matches the same pattern against the path below its <base>.
     routes = ["^[23456789bcdfghjkmnpqrstvwxz]{14}(?:/edit)?/?$"];
+
+    # The link preview Worker, reached through a service binding of the main worker. It answers for the
+    # card route and supplies the og:* tags for every page route above.
+    preview = {
+      binding = "ITINERARY_PREVIEW";
+      card = "^[23456789bcdfghjkmnpqrstvwxz]{14}/card\\.png$";
+      dir = "preview";
+      worker = callPackage ./preview/preview.nix {};
+    };
   };
 }
