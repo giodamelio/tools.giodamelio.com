@@ -2,6 +2,7 @@
   perSystem = {
     pkgs,
     config,
+    previews,
     ...
   }: let
     accountId = "dd00af6bb2aa48a10ddf29a3a20cf429";
@@ -15,11 +16,22 @@
     # wrangler cannot resolve the import, and a shell opened before a tool's
     # routes changed holds a link to an older store path, which would deploy a
     # stale route table without complaining.
+    #
+    # A tool's preview Worker is linked in the same way, as build/ beside its
+    # own wrangler.toml, so wrangler runs it from the store too.
     inWorker = ''
       export CLOUDFLARE_ACCOUNT_ID=${accountId}
       cd worker
       ln -sfn ${config.packages.tool-routes}/tool-routes.js tool-routes.js
+      ${lib.concatMapStrings (p: "ln -sfn ${p.worker} ../${p.dir}/build\n") previews}
     '';
+
+    # Every preview Worker's config, for running it beside the main worker.
+    previewConfigs = lib.concatMapStringsSep " " (p: "-c ../${p.dir}/wrangler.toml") previews;
+
+    # The main worker's service bindings point at the preview Workers, so they
+    # must exist, and be current, before it deploys.
+    deployPreviews = lib.concatMapStrings (p: "wrangler deploy -c ../${p.dir}/wrangler.toml\n") previews;
 
     # The built site, passed rather than linked: it is a build output, and
     # naming it here is what keeps every run serving what the sources say now.
@@ -64,11 +76,15 @@
       deploy = {
         text = ''
           ${inWorker}
+          ${deployPreviews}
           exec wrangler deploy ${site}
         '';
         inputs = [pkgs.wrangler];
       };
 
+      # Uploads a preview version of the main worker only. Its service bindings
+      # reach the preview Workers' deployed versions, so a change to one of
+      # those is not visible here until `deploy` ships it.
       deploy-preview = {
         text = ''
           ${inWorker}
@@ -80,7 +96,7 @@
       serve = {
         text = ''
           ${inWorker}
-          exec wrangler dev ${site} --port 8788 "$@"
+          exec wrangler dev -c wrangler.jsonc ${previewConfigs} ${site} --port 8788 "$@"
         '';
         inputs = [pkgs.wrangler];
       };
@@ -150,6 +166,17 @@
             --file-root "$fixtures" \
             --variable base="''${KEEPER_BASE:-http://localhost:8788}" \
             "$PWD/worker/keeper-of-state/test.hurl"
+        '';
+        inputs = [pkgs.hurl];
+      };
+
+      # Every preview Worker's Hurl suite, through the main worker at
+      # PREVIEW_BASE. The suites read the demo trip, so run keeper-seed first.
+      preview-test = {
+        text = ''
+          exec hurl --test \
+            --variable base="''${PREVIEW_BASE:-http://localhost:8788}" \
+            ${lib.concatMapStringsSep " " (p: "\"$PWD/${p.dir}/test.hurl\"") previews}
         '';
         inputs = [pkgs.hurl];
       };

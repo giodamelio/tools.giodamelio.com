@@ -78,21 +78,23 @@ HTML through `html`.
 
 | Command | Does |
 |---|---|
-| `nix run .#serve` | builds everything and runs `wrangler dev` on port 8788 |
-| `nix run .#deploy` | ships to production |
-| `nix run .#deploy-preview` | uploads a preview version; set `PREVIEW_ALIAS` to name it |
+| `nix run .#serve` | builds everything and runs `wrangler dev` on port 8788, preview Workers included |
+| `nix run .#deploy` | ships the preview Workers, then the main worker, to production |
+| `nix run .#deploy-preview` | uploads a preview version of the main worker only; set `PREVIEW_ALIAS` to name it |
 | `nix run .#keeper-migrate` / `-remote` | applies D1 migrations |
 | `nix run .#keeper-seed` | writes the itinerary's demo trip into the local D1 |
 | `nix run .#keeper-stats` / `-remote` | prints itinerary and key counts from D1 |
 | `nix run .#keeper-test` | runs the Hurl suite against `KEEPER_BASE`, default localhost:8788 |
+| `nix run .#preview-test` | runs each preview Worker's Hurl suite against `PREVIEW_BASE`, after `keeper-seed` |
 | `nix run .#zones` | refreshes `tools/itinerary/src/lib/zone-data.ts` from tzdb |
 
 They are on `PATH` by bare name inside `nix develop`, and they expect to be run from the project root.
 
 Wrangler runs in `worker/` against the checked-in `wrangler.jsonc`, so nothing is copied anywhere.
-Two pieces are not checked in: `worker/tool-routes.js`, which `index.js` imports and both the devShell
-and every wrangler script link in from the store, and the built site, which the scripts pass as
-`--assets` so every run serves what the sources say now. `worker/.wrangler/` holds local D1 state between runs; deleting it
+Three pieces are not checked in: `worker/tool-routes.js`, which `index.js` imports and both the devShell
+and every wrangler script link in from the store; each preview Worker's `build/`, which the scripts link
+in beside its `wrangler.toml`; and the built site, which the scripts pass as `--assets` so every run
+serves what the sources say now. `worker/.wrangler/` holds local D1 state between runs; deleting it
 is safe, and `nix run .#keeper-migrate` builds it back.
 
 That D1 starts empty, which is why the itinerary's "View a demo trip" link 404s locally even though
